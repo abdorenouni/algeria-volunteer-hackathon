@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# الهاكاثون الوطني للابتكار في العمل التطوعي
+### وزارة الشباب والرياضة — الجمهورية الجزائرية الديمقراطية الشعبية
+> **"مؤسسات الشباب... فضاءات للابتكار والتطوع"** — *برنامج عمل وزارة الشباب - سنة 2026*
 
-## Getting Started
+المنصة الرقمية الرسمية لإدارة ومتابعة فعاليات الهاكاثون الوطني للابتكار في العمل التطوعي المقرر تنظيمه يومي **19 و 20 سبتمبر 2026** بالتوازي عبر 58 ولاية.
 
-First, run the development server:
+---
+
+## 🛠️ التقنيات المستخدمة (Tech Stack)
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router & Turbopack)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Validation**: [Zod](https://zod.dev/)
+- **Typography**: [Google Fonts - Tajawal](https://fonts.google.com/specimen/Tajawal) (Full RTL Support)
+
+---
+
+## 📂 هيكل النظام والوحدات الرئيسية
+- **الوحدة 1: البوابة العامة والرئيسية (`app/page.tsx`)**:
+  - الواجهة الترحيبية والوسوم الوزارية الرسمية
+  - المجالات الخمسة المعتمدة للهاكاثون ببطاقات تفاعلية
+  - الرزنامة الزمنية الموحدة لتنفيذ اليومين (19 و 20 سبتمبر)
+  - نافذة البطاقة التقنية الرسمية للهاكاثون (قابلة للطباعة)
+- **الوحدة 2: نظام تسجيل الفرق المتقدم (`app/register/page.tsx`)**:
+  - نموذج متعدد المراحل مدقق بواسطة Zod
+  - قائمة الولايات الـ 58 كاملة والمؤسسات الشبانية الحاضنة
+  - تشكيلة الفريق المحصورة بين 3 و 5 أعضاء حصراً
+  - استخراج وصل التسجيل والمشاركة الرسمي مزود برمز QR ورقم تسلسلي وطني معتمد
+- **الوحدة 3: لوحة تقييم لجنة التحكيم الولائية (`app/jury/page.tsx`)**:
+  - شبكة التقييم الموحدة الرسمية (100 نقطة: 25 + 25 + 25 + 15 + 10)
+  - مؤشر القياس الإشعاعي الرقمي (SVG Telemetry Radial Gauge)
+  - فرز آلي فوري لمنصة تتويج الثلاثي الفائز ولائياً (Top 3 Podium)
+- **الوحدة 4: إدارة الولاية والتقرير الوزاري الموحد (`app/admin/wilaya/page.tsx`)**:
+  - المؤشرات الإحصائية الولائية للمشاركة
+  - البطاقة المختصرة لنتائج الهاكاثون الولائي (تطابق تام للملحق رقم 3 من المنشور الوزاري)
+  - مسار الإرسال البرمجي المركزي المباشر للوزارة: `sd_ppmav@mjeunese.gov.dz`
+  - دعم الطباعة الإدارية الرسمية
+
+---
+
+## 🚀 التشغيل المحلي (Getting Started)
 
 ```bash
+# تثبيت الحزم
+npm install
+
+# تشغيل خادم التطوير
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# بناء المشروع للإنتاج
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+افتح [http://localhost:3000](http://localhost:3000) في المتصفح لمعاينة المنصة.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 الترخيص
+جميع الحقوق محفوظة © 2026 — وزارة الشباب والرياضة، الجمهورية الجزائرية الديمقراطية الشعبية.
