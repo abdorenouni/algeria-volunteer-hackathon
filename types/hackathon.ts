@@ -68,7 +68,9 @@ export interface Team {
   categoryLabel?: string;
   members: TeamMember[];      // 3 to 5 members
   createdAt: string;
-  status: 'registered' | 'evaluated' | 'shortlisted' | 'winner';
+  status: 'registered' | 'accepted' | 'rejected' | 'evaluated' | 'shortlisted' | 'winner';
+  decidedAt?: string;          // ISO timestamp when admin accepted/rejected
+  decisionNote?: string;       // optional admin note
   evaluation?: JuryEvaluation;
 }
 

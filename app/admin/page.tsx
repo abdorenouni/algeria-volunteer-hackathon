@@ -15,11 +15,21 @@ import {
   MapPin, 
   Award, 
   Check, 
+  X, 
+  RotateCcw, 
   Loader2 
 } from 'lucide-react';
 import { Team } from '@/types/hackathon';
 import { TRACKS } from '@/data/tracks';
 import FigmaLogo from '@/components/ui/FigmaLogo';
+
+type DecisionStatus = 'registered' | 'accepted' | 'rejected';
+
+const statusLabel = (s: string): string =>
+  s === 'registered' ? 'بانتظار القرار'
+  : s === 'accepted' ? 'مقبولة'
+  : s === 'rejected' ? 'مرفوضة'
+  : s;
 
 export default function AdminDashboardPage() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -27,6 +37,9 @@ export default function AdminDashboardPage() {
   const [testingBackend, setTestingBackend] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [backendStatus, setBackendStatus] = useState<'online' | 'checking' | 'error'>('checking');
+  const [actionTeamId, setActionTeamId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<boolean>(false);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
 
   // Fetch teams from backend API
   const fetchTeams = async () => {
@@ -102,15 +115,135 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Export JSON
-  const handleExportJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(teams, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `hackathon-registered-teams-${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+  // Admin decision: accept / reject / reopen a registration
+  const handleDecision = async (teamId: string, status: DecisionStatus) => {
+    setActionTeamId(teamId);
+    try {
+      const res = await fetch('/api/register', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, status }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.team) {
+        setTeams((prev) => prev.map((t) => (t.id === data.team.id ? data.team : t)));
+      } else {
+        console.error('Decision failed:', data?.error);
+        await fetchTeams();
+      }
+    } catch (err) {
+      console.error('Decision request error:', err);
+      await fetchTeams();
+    } finally {
+      setActionTeamId(null);
+    }
+  };
+
+  // Derived stats + filtered list
+  const pendingCount = teams.filter((t) => t.status === 'registered').length;
+  const acceptedCount = teams.filter((t) => t.status === 'accepted').length;
+  const rejectedCount = teams.filter((t) => t.status === 'rejected').length;
+  const filteredTeams = teams.filter((t) =>
+    filter === 'all' ? true
+    : filter === 'pending' ? t.status === 'registered'
+    : filter === 'accepted' ? t.status === 'accepted'
+    : t.status === 'rejected'
+  );
+
+  // Export PDF (Arabic-safe: browser-rendered offscreen report captured to image pages)
+  const handleExportPDF = async () => {
+    setExporting(true);
+    let node: HTMLDivElement | null = null;
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas-pro')).default;
+
+      node = document.createElement('div');
+      node.setAttribute('dir', 'rtl');
+      node.style.cssText =
+        'position:fixed;left:-10000px;top:0;width:794px;background:#ffffff;padding:28px;font-family:Tahoma,Arial,sans-serif;color:#1F1A26;';
+
+      const rows = filteredTeams
+        .map(
+          (t, idx) => `<tr>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;text-align:center;">${idx + 1}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;font-family:monospace;">${t.registrationNumber}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;">${t.name}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;">${t.projectTitle}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;">${t.wilayaName ?? t.wilayaCode}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;">${t.facilityName}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;text-align:center;">${t.members?.length ?? 0}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;direction:ltr;text-align:right;">${t.members?.[0]?.email ?? '-'}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;">${new Date(t.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+            <td style="border:1px solid #1F1A26;padding:6px 8px;text-align:center;font-weight:bold;color:${t.status === 'accepted' ? '#047857' : t.status === 'rejected' ? '#BE3943' : '#B45309'};">${statusLabel(t.status)}</td>
+          </tr>`
+        )
+        .join('');
+
+      node.innerHTML = `
+        <div style="border-bottom:3px solid #006233;padding-bottom:12px;margin-bottom:16px;">
+          <h1 style="margin:0;font-size:20px;color:#006233;">قائمة الفرق المسجلة — هاكاثون التطوع الجزائر 2026</h1>
+          <p style="margin:6px 0 0;font-size:12px;color:#475569;">تاريخ التصدير: ${new Date().toLocaleString('fr-FR')} —
+            الإجمالي: ${filteredTeams.length} | مقبولة: ${filteredTeams.filter((t) => t.status === 'accepted').length} |
+            مرفوضة: ${filteredTeams.filter((t) => t.status === 'rejected').length} |
+            بانتظار القرار: ${filteredTeams.filter((t) => t.status === 'registered').length}
+          </p>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead><tr style="background:#006233;color:#ffffff;">
+            ${['#', 'رقم التسجيل', 'اسم الفريق', 'عنوان المشروع', 'الولاية', 'المؤسسة', 'الأعضاء', 'بريد القائد', 'تاريخ التسجيل', 'الحالة']
+              .map((h) => `<th style="border:1px solid #1F1A26;padding:6px 8px;">${h}</th>`)
+              .join('')}
+          </tr></thead>
+          <tbody>${rows || '<tr><td colspan="10" style="border:1px solid #1F1A26;padding:12px;text-align:center;">لا توجد فرق</td></tr>'}</tbody>
+        </table>`;
+
+      document.body.appendChild(node);
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      const img = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = 210;
+      const pageH = 297;
+      const margin = 10;
+      const contentW = pageW - 2 * margin;
+      const sliceH = pageH - 2 * margin;
+      const imgFullH = (canvas.height * contentW) / canvas.width;
+
+      // Slice the tall image into page-height chunks so pagination is crisp
+      const pxPerSlice = (sliceH * canvas.width) / contentW;
+      let offsetPx = 0;
+      let pageIndex = 0;
+      while (offsetPx < canvas.height) {
+        const slice = document.createElement('canvas');
+        slice.width = canvas.width;
+        slice.height = Math.min(pxPerSlice, canvas.height - offsetPx);
+        const ctx = slice.getContext('2d');
+        if (!ctx) throw new Error('canvas context unavailable');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, slice.width, slice.height);
+        ctx.drawImage(canvas, 0, offsetPx, canvas.width, slice.height, 0, 0, canvas.width, slice.height);
+        if (pageIndex > 0) pdf.addPage();
+        pdf.addImage(
+          slice.toDataURL('image/png'),
+          'PNG',
+          margin,
+          margin,
+          contentW,
+          (slice.height * contentW) / canvas.width
+        );
+        offsetPx += slice.height;
+        pageIndex += 1;
+      }
+
+      pdf.save(`hackathon-teams-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('تعذر إنشاء ملف PDF، حاول مجددًا');
+    } finally {
+      node?.remove();
+      setExporting(false);
+    }
   };
 
   return (
@@ -263,11 +396,30 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
               <h2 className="text-xl font-black text-[#1F1A26]">
-                قائمة الفرق المسجلة في الباك إند ({teams.length})
+                قائمة الفرق المسجلة في الباك إند ({filteredTeams.length}/{teams.length})
               </h2>
               <p className="text-xs text-slate-500 font-bold mt-0.5">
                 تحديث تلقائي ومباشر من ملف البيانات registered-teams.json
               </p>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                {([
+                  ['all', `الكل (${teams.length})`],
+                  ['pending', `⏳ بانتظار القرار (${pendingCount})`],
+                  ['accepted', `✓ مقبولة (${acceptedCount})`],
+                  ['rejected', `✗ مرفوضة (${rejectedCount})`],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFilter(key)}
+                    className={`px-3 py-1.5 border-[1.5px] border-[#1F1A26] shadow-[-2px_2px_0px_#1F1A26] text-[11px] font-bold transition-all ${
+                      filter === key ? 'bg-[#1F1A26] text-white' : 'bg-white text-[#1F1A26] hover:bg-slate-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -283,12 +435,16 @@ export default function AdminDashboardPage() {
 
               <button
                 type="button"
-                onClick={handleExportJSON}
-                disabled={teams.length === 0}
+                onClick={handleExportPDF}
+                disabled={teams.length === 0 || exporting}
                 className="px-3.5 py-2 bg-[#5FAE84] text-white border-[1.5px] border-[#1F1A26] shadow-[-2px_2px_0px_#1F1A26] text-xs font-bold flex items-center gap-1.5 hover:bg-[#4B9A70] disabled:opacity-50"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>تصدير JSON</span>
+                {exporting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
+                )}
+                <span>{exporting ? 'جاري إنشاء PDF...' : 'تصدير PDF'}</span>
               </button>
             </div>
           </div>
@@ -335,8 +491,15 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {teams.map((t, idx) => {
+                  {filteredTeams.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="p-10 text-center text-sm font-bold text-slate-500">
+                        لا توجد فرق ضمن هذا التصنيف حاليًا
+                      </td>
+                    </tr>
+                  ) : filteredTeams.map((t, idx) => {
                     const track = TRACKS.find((tr) => tr.id === t.trackId);
+                    const busy = actionTeamId === t.id;
                     return (
                       <tr key={t.id || idx} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-3 font-mono font-bold text-slate-400">{idx + 1}</td>
@@ -368,9 +531,64 @@ export default function AdminDashboardPage() {
                           })}
                         </td>
                         <td className="p-3">
-                          <span className="px-2 py-0.5 bg-emerald-600 text-white font-bold text-[10px]">
-                            مؤكد
-                          </span>
+                          <div className="flex flex-col items-start gap-1.5">
+                            {t.status === 'registered' && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-400 font-bold text-[10px]">
+                                ⏳ بانتظار القرار
+                              </span>
+                            )}
+                            {t.status === 'accepted' && (
+                              <span className="px-2 py-0.5 bg-emerald-600 text-white font-bold text-[10px]">
+                                ✓ تم القبول
+                              </span>
+                            )}
+                            {t.status === 'rejected' && (
+                              <span className="px-2 py-0.5 bg-[#BE3943] text-white font-bold text-[10px]">
+                                ✗ تم الرفض
+                              </span>
+                            )}
+                            {!['registered', 'accepted', 'rejected'].includes(t.status) && (
+                              <span className="px-2 py-0.5 bg-slate-200 text-slate-700 border border-slate-300 font-bold text-[10px]">
+                                {t.status}
+                              </span>
+                            )}
+
+                            {t.status === 'registered' ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDecision(t.id, 'accepted')}
+                                  disabled={busy}
+                                  title="قبول التسجيل"
+                                  className="px-2 py-1 bg-[#5FAE84] text-white border-[1.5px] border-[#1F1A26] shadow-[-1px_1px_0px_#1F1A26] text-[10px] font-bold flex items-center gap-1 hover:bg-[#4B9A70] disabled:opacity-60"
+                                >
+                                  {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                  <span>قبول</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDecision(t.id, 'rejected')}
+                                  disabled={busy}
+                                  title="رفض التسجيل"
+                                  className="px-2 py-1 bg-[#BE3943] text-white border-[1.5px] border-[#1F1A26] shadow-[-1px_1px_0px_#1F1A26] text-[10px] font-bold flex items-center gap-1 hover:bg-[#a52e37] disabled:opacity-60"
+                                >
+                                  {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+                                  <span>رفض</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleDecision(t.id, 'registered')}
+                                disabled={busy}
+                                title="إعادة إلى قائمة الانتظار"
+                                className="px-2 py-1 bg-white text-[#1F1A26] border-[1.5px] border-[#1F1A26] shadow-[-1px_1px_0px_#1F1A26] text-[10px] font-bold flex items-center gap-1 hover:bg-slate-50 disabled:opacity-60"
+                              >
+                                {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                                <span>تراجع</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

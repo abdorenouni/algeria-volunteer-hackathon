@@ -154,3 +154,63 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+// PATCH /api/register -> admin decision on a registration (accept/reject/reopen)
+export async function PATCH(req: NextRequest) {
+  try {
+    let body: { teamId?: unknown; status?: unknown; decisionNote?: unknown } = {};
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({
+        success: false,
+        error: 'محتوى الطلب غير صالح',
+      }, { status: 400 });
+    }
+
+    const teamId = typeof body.teamId === 'string' ? body.teamId.trim() : '';
+    const status = body.status;
+    const isDecisionStatus = (s: unknown): s is 'registered' | 'accepted' | 'rejected' =>
+      s === 'registered' || s === 'accepted' || s === 'rejected';
+
+    if (!teamId || !isDecisionStatus(status)) {
+      return NextResponse.json({
+        success: false,
+        error: 'يجب توفير teamId و status أحد القيم: registered, accepted, rejected',
+      }, { status: 400 });
+    }
+
+    const teams = loadTeams();
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) {
+      return NextResponse.json({
+        success: false,
+        error: `لم يتم العثور على الفريق بالمعرف ${teamId}`,
+      }, { status: 404 });
+    }
+
+    team.status = status;
+    if (status === 'accepted' || status === 'rejected') {
+      team.decidedAt = new Date().toISOString();
+      if (typeof body.decisionNote === 'string' && body.decisionNote.trim()) {
+        team.decisionNote = body.decisionNote.trim();
+      }
+    } else {
+      delete team.decidedAt;
+      delete team.decisionNote;
+    }
+
+    persistTeams(teams);
+
+    return NextResponse.json({ success: true, team }, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    });
+  } catch (err) {
+    console.error('Decision API error:', err);
+    return NextResponse.json({
+      success: false,
+      error: 'حدث خطأ غير متوقع أثناء معالجة قرار الإدارة',
+      details: String(err instanceof Error ? err.message : err),
+    }, { status: 500 });
+  }
+}
