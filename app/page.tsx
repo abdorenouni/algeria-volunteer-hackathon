@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { FileText, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { TRACKS } from '@/data/tracks';
 import TrackCard from '@/components/ui/TrackCard';
 import ScheduleTimeline from '@/components/ui/ScheduleTimeline';
 import CountdownTimer from '@/components/ui/CountdownTimer';
 import HeroIsometricIllustration from '@/components/ui/HeroIsometricIllustration';
 import FaqAccordion from '@/components/ui/FaqAccordion';
-import TechnicalModal from '@/components/ui/TechnicalModal';
 import { 
   MinistryEmblem, 
   WilayaAlgerEmblem, 
@@ -23,7 +22,6 @@ import {
 } from '@/components/ui/InstitutionalEmblems';
 
 export default function HomePage() {
-  const [isTechModalOpen, setIsTechModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#FBF9FC] text-[#1F1A26]">
@@ -65,17 +63,7 @@ export default function HomePage() {
                 <WilayaAlgerEmblem size={56} />
               </div>
 
-              {/* Technical Ministerial Card Trigger */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsTechModalOpen(true)}
-                  className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-[#1F1A26] underline underline-offset-4"
-                >
-                  <FileText className="w-3.5 h-3.5 text-[#5FAE84]" />
-                  <span>الاطلاع على الشروط المرجعية والبطاقة التقنية الرسمية (PDF)</span>
-                </button>
-              </div>
+
 
             </div>
 
@@ -294,12 +282,6 @@ export default function HomePage() {
 
       {/* ================= SECTION 6: FAQ ACCORDION (FIGMA 'الأسئلة الشائعة') ================= */}
       <FaqAccordion />
-
-      {/* Technical Ministerial Reference Modal */}
-      <TechnicalModal
-        isOpen={isTechModalOpen}
-        onClose={() => setIsTechModalOpen(false)}
-      />
 
     </div>
   );
