@@ -117,8 +117,12 @@ export default function HomePage() {
               </div>
 
               <div className="pt-4 flex items-center gap-6 animate-fade-in-up delay-500">
-                <MinistryEmblem size={56} />
-                <WilayaAlgerEmblem size={56} />
+                <div className="animate-logo-float">
+                  <MinistryEmblem size={74} />
+                </div>
+                <div className="animate-logo-float-reverse">
+                  <WilayaAlgerEmblem size={74} />
+                </div>
               </div>
 
             </div>
@@ -259,12 +263,43 @@ export default function HomePage() {
             من تنظيم
           </h3>
 
-          <div className="flex flex-wrap items-center justify-center gap-10 sm:gap-14">
-            <AcsPartnerLogo />
-            <MaisonJeunesLogo />
-            <MinistryEmblem size={68} />
-            <WilayaAlgerEmblem size={68} />
-            <LjpePartnerLogo />
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-12 max-w-5xl mx-auto">
+            
+            {/* ACS Logo */}
+            <div className="animate-logo-float transition-all duration-300" style={{ animationDelay: '0s' }}>
+              <div className="bg-white/95 backdrop-blur-sm border-[1.5px] border-[#1F1A26] px-6 py-4 shadow-[-4px_4px_0px_#1F1A26] hover:shadow-[-8px_8px_0px_#5FAE84] hover:-translate-y-2.5 transition-all duration-300 rounded-2xl flex items-center justify-center min-w-[150px] sm:min-w-[170px] h-28 sm:h-32">
+                <AcsPartnerLogo imgClassName="h-16 sm:h-20 md:h-24" />
+              </div>
+            </div>
+
+            {/* Maison de Jeunes Abderrahmane Laala */}
+            <div className="animate-logo-float-reverse transition-all duration-300" style={{ animationDelay: '0.6s' }}>
+              <div className="bg-white/95 backdrop-blur-sm border-[1.5px] border-[#1F1A26] px-6 py-4 shadow-[-4px_4px_0px_#1F1A26] hover:shadow-[-8px_8px_0px_#5FAE84] hover:-translate-y-2.5 transition-all duration-300 rounded-2xl flex items-center justify-center min-w-[220px] sm:min-w-[270px] h-28 sm:h-32">
+                <MaisonJeunesLogo imgClassName="h-16 sm:h-20 md:h-24" />
+              </div>
+            </div>
+
+            {/* Ministry of Youth & Sports Emblem */}
+            <div className="animate-logo-float transition-all duration-300" style={{ animationDelay: '1.2s' }}>
+              <div className="bg-white/95 backdrop-blur-sm border-[1.5px] border-[#1F1A26] p-4 shadow-[-4px_4px_0px_#1F1A26] hover:shadow-[-8px_8px_0px_#5FAE84] hover:-translate-y-2.5 transition-all duration-300 rounded-2xl flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32">
+                <MinistryEmblem size={96} />
+              </div>
+            </div>
+
+            {/* Wilaya of Algiers Emblem */}
+            <div className="animate-logo-float-reverse transition-all duration-300" style={{ animationDelay: '1.8s' }}>
+              <div className="bg-white/95 backdrop-blur-sm border-[1.5px] border-[#1F1A26] p-4 shadow-[-4px_4px_0px_#1F1A26] hover:shadow-[-8px_8px_0px_#5FAE84] hover:-translate-y-2.5 transition-all duration-300 rounded-2xl flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32">
+                <WilayaAlgerEmblem size={96} />
+              </div>
+            </div>
+
+            {/* LJPE Logo */}
+            <div className="animate-logo-float transition-all duration-300" style={{ animationDelay: '2.4s' }}>
+              <div className="bg-white/95 backdrop-blur-sm border-[1.5px] border-[#1F1A26] px-6 py-4 shadow-[-4px_4px_0px_#1F1A26] hover:shadow-[-8px_8px_0px_#5FAE84] hover:-translate-y-2.5 transition-all duration-300 rounded-2xl flex items-center justify-center min-w-[150px] sm:min-w-[170px] h-28 sm:h-32">
+                <LjpePartnerLogo imgClassName="h-16 sm:h-20 md:h-24" />
+              </div>
+            </div>
+
           </div>
 
 

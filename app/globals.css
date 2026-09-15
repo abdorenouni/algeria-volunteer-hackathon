@@ -220,6 +220,32 @@ body {
   animation: sparkleRotate 4s ease-in-out infinite;
 }
 
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+@keyframes logoFloatReverse {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.animate-logo-float {
+  animation: logoFloat 4s ease-in-out infinite;
+}
+
+.animate-logo-float-reverse {
+  animation: logoFloatReverse 4.8s ease-in-out infinite;
+}
+
 .animate-counter {
   animation: counterGrow 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
