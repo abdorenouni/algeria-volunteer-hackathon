@@ -1,5 +1,46 @@
 [
   {
+    "id": "team-1789437596599-nf2xd",
+    "registrationNumber": "DZ-2026-16-679",
+    "name": "فريق تجريبي #2192",
+    "projectTitle": "منصة رقمية لتطوع الشباب في الأحياء",
+    "projectSummary": "نظام ذكي لتوثيق ساعات التطوع وربط المتطوعين باحتياجات البلدية",
+    "trackId": 3,
+    "wilayaCode": 16,
+    "wilayaName": "الجزائر العاصمة",
+    "facilityName": "دار الشباب المستقبل",
+    "category": "clubs",
+    "categoryLabel": "نوادي التطوع والمواطنة",
+    "members": [
+      {
+        "id": "m-1",
+        "fullName": "أحمد بن محمد",
+        "phone": "0555123456",
+        "email": "tester2192@hackathon.dz",
+        "idCardNumber": "12345678",
+        "role": "قائد الفريق"
+      },
+      {
+        "id": "m-2",
+        "fullName": "كريم عثمان",
+        "phone": "0666123456",
+        "email": "karim@test.dz",
+        "idCardNumber": "12345679",
+        "role": "مطور / مبرمج"
+      },
+      {
+        "id": "m-3",
+        "fullName": "سارة بلقاسم",
+        "phone": "0777123456",
+        "email": "sara@test.dz",
+        "idCardNumber": "12345680",
+        "role": "مصمم / مسوق"
+      }
+    ],
+    "createdAt": "2026-09-15T01:59:56.599Z",
+    "status": "registered"
+  },
+  {
     "id": "team-1789437422869-52xjw",
     "registrationNumber": "DZ-2026-16-317",
     "name": "فريق الابتكار الخوارزمي",
