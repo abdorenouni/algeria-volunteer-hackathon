@@ -14,11 +14,7 @@ import {
   WilayaAlgerEmblem, 
   AcsPartnerLogo, 
   MaisonJeunesLogo, 
-  LjpePartnerLogo,
-  TechPartnerDeployly,
-  TechPartnerChiali,
-  TechPartnerEsisba,
-  TechClubNcs
+  LjpePartnerLogo
 } from '@/components/ui/InstitutionalEmblems';
 
 /* ============================================================
@@ -271,17 +267,6 @@ export default function HomePage() {
             <LjpePartnerLogo />
           </div>
 
-          <div className="mt-16 pt-12 border-t border-[#1F1A26]/10">
-            <h4 className="text-xl sm:text-2xl font-bold text-slate-700 mb-8 font-tajawal">
-              شركاؤنا ورعاة التكنولوجيا
-            </h4>
-            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 opacity-90 grayscale hover:grayscale-0 transition-all duration-500">
-              <TechPartnerDeployly />
-              <TechPartnerChiali />
-              <TechPartnerEsisba />
-              <TechClubNcs />
-            </div>
-          </div>
 
         </div>
       </section>
