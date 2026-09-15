@@ -1,183 +1,198 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, Clock, CheckCircle, Flag, Award, Send, Users, Sparkles } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, Award, Users, Flag, Sparkles } from 'lucide-react';
+
+interface TimelineEvent {
+  day: 1 | 2;
+  side: 'right' | 'left';
+  time: string;
+  title: string;
+  description: string;
+}
 
 export default function ScheduleTimeline() {
-  const [activeDay, setActiveDay] = useState<1 | 2>(1);
-
-  const day1Events = [
+  const events: TimelineEvent[] = [
+    // Day 1
     {
-      time: '08:30 - 09:30',
-      title: 'استقبال الفرق وتأكيد التسجيل',
-      description: 'استقبال الفرق المسجلة بمؤسسات ودور الشباب، التحقق من القوائم (3 إلى 5 أعضاء)، وتوزيع الشارات التقنية.',
-      icon: Users,
-      tag: 'تنظيمي',
-      tagColor: 'bg-slate-100 text-slate-700'
-    },
-    {
-      time: '09:30 - 10:30',
-      title: 'مراسم الافتتاح الرسمي وإطلاق التحديات',
-      description: 'كلمة افتتاحية بحضور ممثلي قطاع الشباب والرياضة، تقديم توجيهات الهاكاثون، وعرض التحديات المحلية المقترحة.',
-      icon: Flag,
-      tag: 'افتتاح رسمي',
-      tagColor: 'bg-emerald-100 text-[#006233]'
-    },
-    {
-      time: '10:30 - 13:00',
-      title: 'جلسات العصف الذهني وتأطير الأفكار',
-      description: 'انطلاق عمل الفرق ضمن ورشات عمل تفاعلية، تحديد المشكلة بدقة، وصياغة الحل الأولي بمرافقة مؤطري الشباب.',
-      icon: Sparkles,
-      tag: 'ورشات عمل',
-      tagColor: 'bg-amber-100 text-amber-800'
-    },
-    {
-      time: '14:00 - 18:00',
-      title: 'تطوير الحل والنمذجة السريعة (Prototyping)',
-      description: 'بناء النموذج الأولي للحل التطوعي (منصة رقمية، مبادرة ميدانية، أو حقيبة تدريبية مجتمعية) وتوجيه المؤطرين.',
-      icon: CheckCircle,
-      tag: 'تطوير مكثف',
-      tagColor: 'bg-sky-100 text-sky-800'
-    },
-    {
-      time: '18:00 - 19:30',
-      title: 'مراجعة التقدم وتجهيز العرض التقديمي (Pitching)',
-      description: 'محاكاة العروض وتدريب الفرق على الإلقاء وتجهيز الملفات الفنية للعرض أمام لجنة التحكيم لليوم الموالي.',
-      icon: Clock,
-      tag: 'تدريب وإرشاد',
-      tagColor: 'bg-purple-100 text-purple-800'
-    }
-  ];
-
-  const day2Events = [
-    {
+      day: 1,
+      side: 'right',
       time: '08:30 - 10:00',
-      title: 'استكمال اللمسات الأخيرة على النماذج',
-      description: 'وضع اللمسات الفنية الأخيرة على النماذج الأولية والعروض التقديمية وتجهيز منصة العرض.',
-      icon: Sparkles,
-      tag: 'إعداد نهائي',
-      tagColor: 'bg-slate-100 text-slate-700'
+      title: 'الافتتاح الرسمي',
+      description: 'استقبال الفرق وتوزيع بطاقات الاعتماد وتوضيح الشروط المرجعية للإيدياثون.',
     },
     {
-      time: '10:00 - 13:30',
-      title: 'جلسة تقديم المشاريع أمام لجنة التحكيم (Pitch)',
-      description: 'عرض الفرق لمشاريعها أمام لجنة التحكيم الولائية (5 دقائق لكل فريق + 3 دقائق لأسئلة ومناقشة اللجنة).',
-      icon: Award,
-      tag: 'جلسة العروض',
-      tagColor: 'bg-rose-100 text-[#D21034]'
+      day: 1,
+      side: 'left',
+      time: '10:30 - 13:00',
+      title: 'انطلاق الحدث',
+      description: 'جلسات تفكيك المعطيات، تحديد الفئات المستهدفة، وحصر الاحتياج الميداني المحلي.',
     },
     {
-      time: '14:30 - 16:00',
-      title: 'المداولات وتطبيق شبكة التقييم الموحدة (100 نقطة)',
-      description: 'اجتماع مغلق للجنة التحكيم لرصد الدرجات وفق المعايير الخمسة الرسمية وفرز أفضل 3 مشاريع ولائية.',
-      icon: CheckCircle,
-      tag: 'مداولات سرية',
-      tagColor: 'bg-amber-100 text-amber-800'
+      day: 1,
+      side: 'right',
+      time: '14:00 - 18:00',
+      title: 'حصر التحدي وبلورة الافكار',
+      description: 'جلسات مرافقة مع مؤطري دار الشباب لبلورة الحل في مخطط تنفيذي متكامل.',
+    },
+    // Day 2
+    {
+      day: 2,
+      side: 'left',
+      time: '08:30 - 11:30',
+      title: 'اللمسات الأخيرة وتجهيز العروض',
+      description: 'صياغة وثيقة العرض ومخطط الاستدامة الميداني وتجربة الإلقاء أمام المرشدين.',
     },
     {
+      day: 2,
+      side: 'right',
+      time: '13:00 - 16:00',
+      title: 'العرض أمام لجنة التحكيم',
+      description: 'تقديم العرض في 5 دقائق مع 3 دقائق مناقشة وتقييم دقيق حسب شبكة 100 نقطة.',
+    },
+    {
+      day: 2,
+      side: 'left',
       time: '16:30 - 18:00',
-      title: 'الحفل الختامي، إعلان النتائج وتكريم الفائزين',
-      description: 'إعلان الفائزين بالمراكز الثلاثة الأولى، توزيع الشهادات والجوائز التكريمية وتكريم كافة المشاركين والشركاء.',
-      icon: Award,
-      tag: 'تتويج رسمي',
-      tagColor: 'bg-emerald-100 text-[#006233]'
+      title: 'إعلان النتائج وتتويج الفائزين',
+      description: 'المصادقة على محضر النتائج وتأهيل المراتب الأولى للمرحلة الوطنية.',
     },
-    {
-      time: '18:30',
-      title: 'إرسال التقرير النهائي للوزارة',
-      description: 'اعتماد المحضر الرسمي والبطاقة المختصرة وإرسال التقرير فورياً إلى: sd_ppmav@mjeunese.gov.dz.',
-      icon: Send,
-      tag: 'إرسال وزاري',
-      tagColor: 'bg-emerald-600 text-white font-bold'
-    }
   ];
-
-  const events = activeDay === 1 ? day1Events : day2Events;
 
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-md">
+    <section id="schedule" className="relative py-16 scroll-mt-20">
       
-      {/* Tab Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
-        <div>
-          <span className="text-xs font-bold text-[#006233] bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full inline-block mb-2">
-            الرزنامة الزمنية الموحدة
-          </span>
-          <h3 className="text-2xl font-black text-slate-900">
-            برنامج التنفيذ الميداني للهاكاثون عبر 58 ولاية
-          </h3>
-          <p className="text-xs text-slate-500 mt-1">
-            جدول زمني تنفيذي موحد يُطبق بالتوازي في جميع مؤسسات ودور الشباب المنظمة
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl self-start sm:self-auto">
-          <button
-            onClick={() => setActiveDay(1)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeDay === 1
-                ? 'bg-[#006233] text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>اليوم الأول: 19 سبتمبر 2026</span>
-          </button>
-          <button
-            onClick={() => setActiveDay(2)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeDay === 2
-                ? 'bg-[#006233] text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            <span>اليوم الثاني: 20 سبتمبر 2026</span>
-          </button>
-        </div>
+      {/* Decorative Red Arrow (From Figma top corner) */}
+      <div className="absolute top-6 right-6 sm:right-16 hidden md:block select-none pointer-events-none">
+        <svg width="90" height="90" viewBox="0 0 100 100" fill="none">
+          <path
+            d="M85 85 C60 50, 45 40, 20 20"
+            stroke="#D9383A"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+          <polygon points="12,15 32,15 25,32" fill="#D9383A" />
+        </svg>
       </div>
 
-      {/* Timeline List */}
-      <div className="relative pl-2 pr-4 sm:pr-8">
-        {/* Continuous vertical line */}
-        <div className="absolute right-7 sm:right-11 top-4 bottom-4 w-0.5 bg-slate-200"></div>
+      {/* Section Header */}
+      <div className="text-center mb-16">
+        <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight font-tajawal">
+          الجدول الزمني للحدث
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-600 mt-2 font-bold">
+          البرنامج الميداني الموحد المنفذ عبر مؤسسات ودور الشباب بولاية الجزائر (19 - 20 سبتمبر 2026)
+        </p>
+      </div>
 
-        <div className="space-y-6">
-          {events.map((ev, index) => {
-            const Icon = ev.icon;
-            return (
-              <div key={index} className="relative flex items-start gap-4 sm:gap-6 group">
-                {/* Node icon */}
-                <div className="relative z-10 w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white border-2 border-[#006233] flex items-center justify-center text-[#006233] group-hover:bg-[#006233] group-hover:text-white transition-colors shadow-sm flex-shrink-0">
-                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
+      {/* Main Alternating Timeline Spine */}
+      <div className="relative max-w-5xl mx-auto px-4">
+        
+        {/* Center Vertical Spine Line (Desktop) */}
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-1 bg-black -translate-x-1/2 -z-0"></div>
 
-                {/* Event Card */}
-                <div className="flex-1 bg-slate-50/70 hover:bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/80 transition-all hover:shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-black text-emerald-800 bg-emerald-100/70 px-2.5 py-1 rounded-lg">
-                        {ev.time}
-                      </span>
-                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${ev.tagColor}`}>
-                        {ev.tag}
-                      </span>
-                    </div>
-                  </div>
+        {/* ================= DAY 1 BADGE ================= */}
+        <div className="flex justify-center mb-12 relative z-10">
+          <div className="neo-box bg-[#2E7D5B] text-white px-6 py-2.5 font-black text-sm sm:text-base border-2 border-black shadow-[4px_4px_0px_#000]">
+            19 سبتمبر 2026 — اليوم الأول
+          </div>
+        </div>
 
-                  <h4 className="text-base font-bold text-slate-900 mb-1.5">
+        {/* DAY 1 EVENTS */}
+        <div className="space-y-12 mb-16">
+          {events.filter((e) => e.day === 1).map((ev, idx) => (
+            <div
+              key={idx}
+              className={`relative flex flex-col md:flex-row items-center ${
+                ev.side === 'right' ? 'md:flex-row-reverse' : ''
+              } gap-6 md:gap-12`}
+            >
+              {/* Event Card */}
+              <div className="w-full md:w-[46%]">
+                <div
+                  className={`flex flex-col text-right ${
+                    ev.side === 'right' ? 'md:items-start' : 'md:items-end'
+                  }`}
+                >
+                  <h3 className="text-xl sm:text-2xl font-black text-black mb-1 font-tajawal">
                     {ev.title}
-                  </h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {ev.description}
-                  </p>
+                  </h3>
+                  <span className="text-sm font-black font-mono text-[#D9383A] mb-3">
+                    {ev.time}
+                  </span>
+
+                  {/* Neo-brutalist Content Box */}
+                  <div className="neo-box p-5 w-full bg-white border-2 border-black shadow-[4px_4px_0px_#000]">
+                    <p className="text-xs sm:text-sm text-black font-medium leading-relaxed">
+                      {ev.description}
+                    </p>
+                  </div>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Center Marker Dot (Desktop) */}
+              <div className="hidden md:flex absolute left-1/2 top-6 -translate-x-1/2 z-10 w-7 h-7 rounded-full bg-[#2E7D5B] border-2 border-black items-center justify-center shadow-[2px_2px_0px_#000]">
+                <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+              </div>
+
+              {/* Empty Spacer Column for Desktop alternating */}
+              <div className="hidden md:block w-[46%]"></div>
+            </div>
+          ))}
         </div>
+
+        {/* ================= DAY 2 BADGE ================= */}
+        <div className="flex justify-center mb-12 relative z-10">
+          <div className="neo-box bg-[#2E7D5B] text-white px-6 py-2.5 font-black text-sm sm:text-base border-2 border-black shadow-[4px_4px_0px_#000]">
+            20 سبتمبر 2026 — اليوم الثاني
+          </div>
+        </div>
+
+        {/* DAY 2 EVENTS */}
+        <div className="space-y-12">
+          {events.filter((e) => e.day === 2).map((ev, idx) => (
+            <div
+              key={idx}
+              className={`relative flex flex-col md:flex-row items-center ${
+                ev.side === 'right' ? 'md:flex-row-reverse' : ''
+              } gap-6 md:gap-12`}
+            >
+              {/* Event Card */}
+              <div className="w-full md:w-[46%]">
+                <div
+                  className={`flex flex-col text-right ${
+                    ev.side === 'right' ? 'md:items-start' : 'md:items-end'
+                  }`}
+                >
+                  <h3 className="text-xl sm:text-2xl font-black text-black mb-1 font-tajawal">
+                    {ev.title}
+                  </h3>
+                  <span className="text-sm font-black font-mono text-[#D9383A] mb-3">
+                    {ev.time}
+                  </span>
+
+                  {/* Neo-brutalist Content Box */}
+                  <div className="neo-box p-5 w-full bg-white border-2 border-black shadow-[4px_4px_0px_#000]">
+                    <p className="text-xs sm:text-sm text-black font-medium leading-relaxed">
+                      {ev.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Center Marker Dot (Desktop) */}
+              <div className="hidden md:flex absolute left-1/2 top-6 -translate-x-1/2 z-10 w-7 h-7 rounded-full bg-[#2E7D5B] border-2 border-black items-center justify-center shadow-[2px_2px_0px_#000]">
+                <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+              </div>
+
+              {/* Empty Spacer Column for Desktop alternating */}
+              <div className="hidden md:block w-[46%]"></div>
+            </div>
+          ))}
+        </div>
+
       </div>
 
-    </div>
+    </section>
   );
 }
