@@ -3,7 +3,7 @@
 import React from 'react';
 
 // Official Circular Algerian Ministry of Youth and Sports Emblem from Figma
-export function MinistryEmblem({ size = 56, className = '' }: { size?: number; className?: string }) {
+export function MinistryEmblem({ size = 64, className = '' }: { size?: number; className?: string }) {
   return (
     <div
       className={`relative inline-flex items-center justify-center flex-shrink-0 select-none ${className}`}
@@ -11,7 +11,7 @@ export function MinistryEmblem({ size = 56, className = '' }: { size?: number; c
       title="وزارة الشباب والرياضة — الجمهورية الجزائرية الديمقراطية الشعبية"
     >
       <img
-        src="/logos/logo_mjs.png"
+        src="/figma-assets/organizer-mjs.png"
         alt="شعار وزارة الشباب والرياضة"
         width={size}
         height={size}
@@ -21,17 +21,17 @@ export function MinistryEmblem({ size = 56, className = '' }: { size?: number; c
   );
 }
 
-// Official Wilaya of Algiers Youth & Sports Directorate Emblem from Figma
-export function WilayaAlgerEmblem({ size = 56, className = '' }: { size?: number; className?: string }) {
+// Official Wilaya Emblem from Figma
+export function WilayaAlgerEmblem({ size = 64, className = '' }: { size?: number; className?: string }) {
   return (
     <div
       className={`relative inline-flex items-center justify-center flex-shrink-0 select-none ${className}`}
       style={{ width: size, height: size }}
-      title="مديرية الشباب والرياضة والترفيه لولاية الجزائر"
+      title="ولاية سيدي بلعباس — الجمهورية الجزائرية الديمقراطية الشعبية"
     >
       <img
-        src="/logos/logo_djs_alger.png"
-        alt="شعار مديرية الشباب والرياضة والترفيه لولاية الجزائر"
+        src="/figma-assets/organizer-wilaya.png"
+        alt="شعار ولاية سيدي بلعباس"
         width={size}
         height={size}
         className="w-full h-full object-contain"
@@ -40,20 +40,20 @@ export function WilayaAlgerEmblem({ size = 56, className = '' }: { size?: number
   );
 }
 
-// White Monochrome Wilaya of Algiers Emblem for Dark Footers from Figma
+// White Monochrome Wilaya Emblem for Dark Footers from Figma
 export function WilayaAlgerEmblemWhite({ size = 56, className = '' }: { size?: number; className?: string }) {
   return (
     <div
       className={`relative inline-flex items-center justify-center flex-shrink-0 select-none ${className}`}
       style={{ width: size, height: size }}
-      title="مديرية الشباب والرياضة والترفيه لولاية الجزائر"
+      title="ولاية سيدي بلعباس"
     >
       <img
-        src="/logos/logo_djs_alger_white.png"
-        alt="شعار مديرية الشباب والرياضة والترفيه لولاية الجزائر"
+        src="/figma-assets/organizer-wilaya.png"
+        alt="شعار ولاية سيدي بلعباس"
         width={size}
         height={size}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain brightness-0 invert"
       />
     </div>
   );
@@ -62,10 +62,10 @@ export function WilayaAlgerEmblemWhite({ size = 56, className = '' }: { size?: n
 // ACS Association Partner Logo from Figma
 export function AcsPartnerLogo({ className = '' }: { className?: string }) {
   return (
-    <div className={`flex items-center justify-center select-none ${className}`} title="Advanced Computing Society (ACS)">
+    <div className={`flex items-center justify-center select-none ${className}`} title="الرابطة الولائية للأنشطة الثقافية والعلمية للشباب (ACS)">
       <img
-        src="/logos/logo_acs.png"
-        alt="ACS - Advanced Computing Society"
+        src="/figma-assets/organizer-acs.png"
+        alt="ACS - الرابطة الولائية للأنشطة الثقافية والعلمية للشباب"
         className="h-16 w-auto object-contain hover:scale-105 transition-transform"
       />
     </div>
@@ -75,10 +75,10 @@ export function AcsPartnerLogo({ className = '' }: { className?: string }) {
 // Maison de Jeunes Abderrahmane Laala from Figma
 export function MaisonJeunesLogo({ className = '' }: { className?: string }) {
   return (
-    <div className={`flex items-center justify-center select-none ${className}`} title="دار الشباب عبد الرحمن لعلى">
+    <div className={`flex items-center justify-center select-none ${className}`} title="ديوان مؤسسات الشباب">
       <img
         src="/logos/logo_maison_jeunes.png"
-        alt="دار الشباب عبد الرحمن لعلى - Maison de jeunes Abderrahmane Laala"
+        alt="ديوان مؤسسات الشباب"
         className="h-16 w-auto object-contain hover:scale-105 transition-transform"
       />
     </div>
@@ -93,6 +93,55 @@ export function LjpePartnerLogo({ className = '' }: { className?: string }) {
         src="/logos/logo_ljpe.png"
         alt="L.J.P.E"
         className="h-16 w-auto object-contain hover:scale-105 transition-transform"
+      />
+    </div>
+  );
+}
+
+// Brand Identity Partners from Figma Node 13:7243 (Deployly, Chiali, ESI SBA, NCS)
+export function TechPartnerDeployly({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center select-none ${className}`} title="Deployly Cloud">
+      <img
+        src="/figma-assets/partner-deployly.png"
+        alt="Deployly Cloud"
+        className="h-12 w-auto object-contain hover:scale-105 transition-transform"
+      />
+    </div>
+  );
+}
+
+export function TechPartnerChiali({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center select-none ${className}`} title="Groupe Chiali">
+      <img
+        src="/figma-assets/partner-chiali.png"
+        alt="Groupe Chiali"
+        className="h-12 w-auto object-contain hover:scale-105 transition-transform"
+      />
+    </div>
+  );
+}
+
+export function TechPartnerEsisba({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center select-none ${className}`} title="École Supérieure en Informatique 08 Mai 1945 Sidi Bel Abbès">
+      <img
+        src="/figma-assets/partner-esisba.png"
+        alt="ESI SBA"
+        className="h-14 w-auto object-contain hover:scale-105 transition-transform"
+      />
+    </div>
+  );
+}
+
+export function TechClubNcs({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center select-none ${className}`} title="National Cyber Security Club">
+      <img
+        src="/figma-assets/club-ncs.png"
+        alt="NCS Club"
+        className="h-12 w-auto object-contain hover:scale-105 transition-transform"
       />
     </div>
   );

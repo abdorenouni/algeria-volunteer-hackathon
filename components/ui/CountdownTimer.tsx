@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 
 // Target date: September 19, 2026 at 08:30 AM (Algeria time, UTC+1)
 const TARGET_DATE = new Date('2026-09-19T08:30:00+01:00').getTime();
@@ -36,53 +35,52 @@ export default function CountdownTimer() {
   };
 
   return (
-    <div className="relative z-20 inline-flex flex-col sm:flex-row items-stretch border-2 border-black bg-white shadow-[5px_5px_0px_#000000] overflow-hidden transition-all">
+    <div className="relative z-20 inline-flex flex-row items-stretch border-[1.5px] border-[#1F1A26] bg-white shadow-[-4.8px_4.8px_0px_#1F1A26] overflow-hidden transition-all">
       
-      {/* Register CTA Box (Figma Green #2E7D5B) on the RIGHT in RTL */}
+      {/* Register CTA Button in Figma Green (#5FAE84) */}
       <Link
         href="/register"
-        className="flex items-center justify-center gap-2 bg-[#2E7D5B] hover:bg-[#246448] text-white px-8 py-3.5 font-black text-base transition-colors border-b-2 sm:border-b-0 sm:border-l-2 border-black group flex-shrink-0"
+        className="flex items-center justify-center bg-[#5FAE84] hover:bg-[#4B9A70] text-white px-7 py-3 font-bold text-sm transition-colors border-l-[1.5px] border-[#1F1A26] flex-shrink-0"
       >
         <span>سجل الآن</span>
-        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
       </Link>
 
-      {/* 4 Countdown Boxes */}
-      <div className="flex items-center divide-x divide-x-reverse divide-black bg-white">
+      {/* 4 Countdown Boxes matching Figma Desktop - 3 */}
+      <div className="flex items-center divide-x divide-x-reverse divide-[#1F1A26] bg-white">
         
         {/* Days */}
-        <div className="flex flex-col items-center justify-center px-4 sm:px-5 py-2 min-w-[64px]">
-          <span className="text-xl sm:text-2xl font-black font-mono text-black leading-tight" suppressHydrationWarning>
+        <div className="flex flex-col items-center justify-center px-4 py-2 min-w-[56px]">
+          <span className="text-lg sm:text-xl font-bold font-mono text-[#1F1A26] leading-tight" suppressHydrationWarning>
             {formatNumber(timeLeft.days)}
           </span>
-          <span className="text-[11px] font-bold text-black mt-0.5">أيام</span>
+          <span className="text-[11px] font-medium text-[#1F1A26] mt-0.5">أيام</span>
         </div>
 
         {/* Hours */}
-        <div className="flex flex-col items-center justify-center px-4 sm:px-5 py-2 min-w-[64px]">
-          <span className="text-xl sm:text-2xl font-black font-mono text-black leading-tight" suppressHydrationWarning>
+        <div className="flex flex-col items-center justify-center px-4 py-2 min-w-[56px]">
+          <span className="text-lg sm:text-xl font-bold font-mono text-[#1F1A26] leading-tight" suppressHydrationWarning>
             {formatNumber(timeLeft.hours)}
           </span>
-          <span className="text-[11px] font-bold text-black mt-0.5">ساعة</span>
+          <span className="text-[11px] font-medium text-[#1F1A26] mt-0.5">ساعة</span>
         </div>
 
         {/* Minutes */}
-        <div className="flex flex-col items-center justify-center px-4 sm:px-5 py-2 min-w-[64px]">
-          <span className="text-xl sm:text-2xl font-black font-mono text-black leading-tight" suppressHydrationWarning>
+        <div className="flex flex-col items-center justify-center px-4 py-2 min-w-[56px]">
+          <span className="text-lg sm:text-xl font-bold font-mono text-[#1F1A26] leading-tight" suppressHydrationWarning>
             {formatNumber(timeLeft.minutes)}
           </span>
-          <span className="text-[11px] font-bold text-black mt-0.5">دقيقة</span>
+          <span className="text-[11px] font-medium text-[#1F1A26] mt-0.5">دقيقة</span>
         </div>
 
-        {/* Seconds (live ticker in red) */}
-        <div className="flex flex-col items-center justify-center px-4 sm:px-5 py-2 min-w-[64px] bg-red-50/30">
+        {/* Seconds */}
+        <div className="flex flex-col items-center justify-center px-4 py-2 min-w-[56px]">
           <span 
-            className="text-xl sm:text-2xl font-black font-mono text-[#D9383A] leading-tight"
+            className="text-lg sm:text-xl font-bold font-mono text-[#1F1A26] leading-tight"
             suppressHydrationWarning
           >
             {formatNumber(timeLeft.seconds)}
           </span>
-          <span className="text-[11px] font-bold text-black mt-0.5">ثانية</span>
+          <span className="text-[11px] font-medium text-[#1F1A26] mt-0.5">ثانية</span>
         </div>
 
       </div>

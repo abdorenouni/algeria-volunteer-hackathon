@@ -3,31 +3,27 @@
 :root {
   --dz-green: #006233;
   --dz-green-hover: #004d28;
-  --dz-green-surface: #F0FDF4;
-  --dz-green-border: #BBF7D0;
-  --dz-red: #D21034;
-  --dz-red-surface: #FEF2F2;
-  --dz-red-border: #FECACA;
-  --dz-slate: #0F172A;
-  --dz-slate-muted: #64748B;
-  --dz-bg: #F8FAFC;
+  --dz-red: #BE3943;
+  --dz-slate: #1F1A26;
+  --dz-bg: #FBF9FC;
   --dz-surface: #FFFFFF;
-  --dz-border: #E2E8F0;
-  --dz-gold: #D97706;
+  --dz-border: #1F1A26;
 
   /* Figma Brand Identity Tokens */
-  --figma-green: #2E7D5B;
-  --figma-green-hover: #246448;
-  --figma-dark-green: #1E4334;
-  --figma-red: #D9383A;
-  --figma-yellow: #F4B41A;
   --figma-bg: #FBF9FC;
+  --figma-stroke: #1F1A26;
+  --figma-green: #5FAE84;
+  --figma-green-hover: #4B9A70;
+  --figma-dark-green: #1E3A2B;
+  --figma-banner-green: #3B7054;
+  --figma-red: #BE3943;
+  --figma-yellow: #F4B41A;
 }
 
 body {
   font-family: var(--font-tajawal), 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #FBF9FC;
-  color: #000000;
+  color: #1F1A26;
   direction: rtl;
   text-align: right;
   min-height: 100vh;
@@ -38,23 +34,29 @@ body {
 /* Neo-Brutalist Utilities matching Figma */
 .neo-box {
   background-color: #FFFFFF;
-  border: 2px solid #000000;
-  box-shadow: 4px 4px 0px #000000;
+  border: 1.5px solid #1F1A26;
+  box-shadow: -4px 4px 0px #1F1A26;
 }
 
 .neo-box-sm {
-  border: 2px solid #000000;
-  box-shadow: 2px 2px 0px #000000;
+  border: 1.5px solid #1F1A26;
+  box-shadow: -2px 2px 0px #1F1A26;
 }
 
 .neo-box-lg {
-  border: 2px solid #000000;
-  box-shadow: 6px 6px 0px #000000;
+  border: 2px solid #1F1A26;
+  box-shadow: -8px 8px 4px 0px #1F1A26;
+}
+
+.neo-card-figma {
+  background-color: #FBF9FC;
+  border: 2px solid #1F1A26;
+  box-shadow: -8px 8px 4px 0px #1F1A26;
 }
 
 .neo-btn {
-  border: 2px solid #000000;
-  box-shadow: 4px 4px 0px #000000;
+  border: 1.5px solid #1F1A26;
+  box-shadow: -4.8px 4.8px 0px #1F1A26;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   display: inline-flex;
@@ -63,35 +65,37 @@ body {
 }
 
 .neo-btn:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px #000000;
+  transform: translate(2px, -2px);
+  box-shadow: -6px 6px 0px #1F1A26;
 }
 
 .neo-btn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0px #000000;
+  transform: translate(-1px, 1px);
+  box-shadow: -2px 2px 0px #1F1A26;
 }
 
 .neo-btn-green {
-  background-color: #2E7D5B;
+  background-color: #5FAE84;
   color: #FFFFFF;
+  border-color: #1F1A26;
+  box-shadow: -4px 4px 0px #000000;
 }
 
 .neo-btn-green:hover {
-  background-color: #246448;
+  background-color: #4B9A70;
 }
 
 .neo-input {
-  border: 2px solid #000000;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
-  transition: all 0.15s ease;
+  border: 1.5px solid #1F1A26;
   background-color: #FFFFFF;
+  transition: all 0.15s ease;
+  color: #1F1A26;
 }
 
 .neo-input:focus {
   outline: none;
-  box-shadow: 4px 4px 0px #2E7D5B;
-  border-color: #000000;
+  box-shadow: -3px 3px 0px #5FAE84;
+  border-color: #1F1A26;
 }
 
 /* Geometric Institutional Dot Grid */
