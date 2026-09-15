@@ -140,10 +140,37 @@ export async function POST(req: NextRequest) {
     const updatedTeams = [newTeam, ...existingTeams];
     persistTeams(updatedTeams);
 
+    // Trigger Node Mail Sender to send confirmation email
+    let emailDelivery: any = { success: false, mode: 'none' };
+    try {
+      const { sendRegistrationConfirmationEmail } = await import('@/lib/mailer');
+      const trackLabels: Record<number, string> = {
+        1: 'تطوير المنصات الرقمية لخدمة العمل التطوعي',
+        2: 'إدارة وتنسيق الحملات الإغاثية والبيئية',
+        3: 'تعزيز المواطنة الرقمية والمشاركة الشبابية',
+        4: 'حلول ذكية للمؤسسات الشبانية ودور الشباب',
+        5: 'ابتكار نماذج استدامة المبادرات التطوعية',
+      };
+      emailDelivery = await sendRegistrationConfirmationEmail({
+        to: leaderEmail,
+        leaderName,
+        teamName: name,
+        registrationNumber,
+        trackName: trackLabels[trackId] || `المسار التنافسي رقم ${trackId}`,
+        wilayaName: newTeam.wilayaName || 'الجزائر العاصمة',
+        facilityName,
+        categoryLabel: newTeam.categoryLabel,
+      });
+    } catch (mailErr: any) {
+      console.warn('[Node Sender] Email dispatch warning (non-blocking):', mailErr);
+      emailDelivery = { success: false, mode: 'error', error: mailErr?.message || String(mailErr) };
+    }
+
     return NextResponse.json({
       success: true,
       message: 'تم تسجيل الفريق بنجاح في المنصة الرسمية للهاكاثون',
       team: newTeam,
+      emailDelivery,
     }, { status: 200 });
   } catch (err: any) {
     console.error('Registration API error:', err);

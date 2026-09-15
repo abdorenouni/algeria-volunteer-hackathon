@@ -17,7 +17,10 @@ import {
   Check, 
   X, 
   RotateCcw, 
-  Loader2 
+  Loader2,
+  Mail,
+  Send,
+  Inbox
 } from 'lucide-react';
 import { Team } from '@/types/hackathon';
 import { TRACKS } from '@/data/tracks';
@@ -41,6 +44,14 @@ export default function AdminDashboardPage() {
   const [exporting, setExporting] = useState<boolean>(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
 
+  // Node Sender State
+  const [emails, setEmails] = useState<any[]>([]);
+  const [loadingEmails, setLoadingEmails] = useState<boolean>(false);
+  const [senderInfo, setSenderInfo] = useState<any>(null);
+  const [testEmailAddr, setTestEmailAddr] = useState<string>('participant@hackathon.dz');
+  const [testingEmail, setTestingEmail] = useState<boolean>(false);
+  const [testEmailStatus, setTestEmailStatus] = useState<any>(null);
+
   // Fetch teams from backend API
   const fetchTeams = async () => {
     setLoading(true);
@@ -61,9 +72,68 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Fetch sent emails from Node Sender API
+  const fetchEmails = async () => {
+    setLoadingEmails(true);
+    try {
+      const res = await fetch('/api/send-email', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setEmails(data.emails || []);
+        setSenderInfo({
+          mode: data.mode,
+          from: data.from,
+          count: data.count,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch emails:', err);
+    } finally {
+      setLoadingEmails(false);
+    }
+  };
+
   useEffect(() => {
     fetchTeams();
+    fetchEmails();
   }, []);
+
+  // Quick Test Node Sender Email
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddr || !testEmailAddr.includes('@')) {
+      alert('يرجى إدخال بريد إلكتروني صالح');
+      return;
+    }
+    setTestingEmail(true);
+    setTestEmailStatus(null);
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: testEmailAddr,
+          leaderName: 'مشارك تجريبي',
+          teamName: 'فريق الابتكار والتطوع التجريبي',
+          registrationNumber: `DZ-2026-16-${Math.floor(100 + Math.random() * 900)}`,
+        }),
+      });
+      const data = await res.json();
+      setTestEmailStatus({
+        ok: res.ok,
+        message: data.message || (res.ok ? 'تم الإرسال بنجاح' : 'تعذر الإرسال'),
+        details: data.details,
+      });
+      await fetchEmails();
+    } catch (err: any) {
+      setTestEmailStatus({
+        ok: false,
+        message: 'خطأ في الاتصال بخادم البريد',
+        error: err?.message,
+      });
+    } finally {
+      setTestingEmail(false);
+    }
+  };
 
   // Quick Test Backend Submission
   const handleTestBackend = async () => {
@@ -103,6 +173,7 @@ export default function AdminDashboardPage() {
 
       if (res.ok) {
         await fetchTeams();
+        await fetchEmails();
       }
     } catch (err: any) {
       setTestResult({
@@ -593,6 +664,161 @@ export default function AdminDashboardPage() {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+        </div>
+
+        {/* ================= NODE SENDER LIVE INSPECTOR ================= */}
+        <div className="bg-white border-[1.5px] border-[#1F1A26] shadow-[-6px_6px_0px_#1F1A26] p-6 space-y-6">
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded bg-[#5FAE84]/15 border border-[#5FAE84] flex items-center justify-center text-[#213D2E]">
+                <Mail className="w-5 h-5 text-[#5FAE84]" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-[#1F1A26] flex items-center gap-2">
+                  <span>مرسل البريد الإلكتروني للهاكاثون (Node Mail Sender)</span>
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-300">
+                    نشط ومهيأ
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 font-bold mt-0.5">
+                  إرسال تأكيدات التسجيل للمشاركين وتوثيقها في data/sent-emails.json (Nodemailer)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-xs font-mono bg-slate-100 px-3 py-1.5 border border-slate-300 font-bold">
+                النمط: <span className="text-[#BE3943]">{senderInfo?.mode === 'smtp' ? 'خادم SMTP حقيقي' : 'محاكاة وتوثيق آمن'}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={fetchEmails}
+                disabled={loadingEmails}
+                className="px-3.5 py-2 bg-white text-[#1F1A26] border-[1.5px] border-[#1F1A26] shadow-[-2px_2px_0px_#1F1A26] text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-[#5FAE84] ${loadingEmails ? 'animate-spin' : ''}`} />
+                <span>تحديث الرسائل</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Direct Send Test Form */}
+          <div className="p-4 bg-slate-50 border border-slate-300 space-y-3">
+            <h3 className="text-xs font-black text-[#1F1A26] flex items-center gap-1.5">
+              <Send className="w-3.5 h-3.5 text-[#5FAE84]" />
+              <span>إرسال بريد تجريبي مباشر لاختبار Node Sender:</span>
+            </h3>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <input
+                type="email"
+                value={testEmailAddr}
+                onChange={(e) => setTestEmailAddr(e.target.value)}
+                placeholder="أدخل بريدك لتلقي إشعار تجريبي..."
+                className="w-full sm:flex-1 h-11 px-4 bg-white border-[1.5px] border-[#1F1A26] text-xs text-[#213D2E] font-medium focus:outline-none focus:border-[#5FAE84]"
+              />
+
+              <button
+                type="button"
+                onClick={handleSendTestEmail}
+                disabled={testingEmail}
+                className="w-full sm:w-auto h-11 px-6 bg-[#213D2E] hover:bg-[#15291E] text-white border-[1.5px] border-[#1F1A26] shadow-[-2px_2px_0px_#000000] font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-70"
+              >
+                {testingEmail ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>جاري الإرسال عبر Node...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>إرسال بريد تجريبي الآن</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {testEmailStatus && (
+              <div className={`p-3 text-xs font-bold border flex items-center justify-between ${
+                testEmailStatus.ok 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                  : 'bg-red-50 text-red-800 border-red-300'
+              }`}>
+                <span>{testEmailStatus.message}</span>
+                <button
+                  onClick={() => setTestEmailStatus(null)}
+                  className="underline text-[11px]"
+                >
+                  إغلاق
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Dispatched Emails Table */}
+          {loadingEmails ? (
+            <div className="py-10 text-center space-y-2">
+              <Loader2 className="w-6 h-6 text-[#5FAE84] animate-spin mx-auto" />
+              <p className="text-xs font-bold text-slate-500">جاري تحميل سجل الرسائل المرسلة...</p>
+            </div>
+          ) : emails.length === 0 ? (
+            <div className="py-12 text-center space-y-2">
+              <Inbox className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-sm font-bold text-slate-500">لا توجد رسائل بريد مسجلة بعد في Node Sender</p>
+              <p className="text-xs text-slate-400">أي فريق يسجل في المنصة أو اختبار ترسله سيظهر هنا فوريًا</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="bg-slate-100 border-b-[1.5px] border-[#1F1A26] text-[#1F1A26]">
+                    <th className="p-3 font-black">#</th>
+                    <th className="p-3 font-black">المستلم (To)</th>
+                    <th className="p-3 font-black">رقم التسجيل</th>
+                    <th className="p-3 font-black">اسم الفريق</th>
+                    <th className="p-3 font-black">طريقة الإرسال</th>
+                    <th className="p-3 font-black">تاريخ ووقت الإرسال</th>
+                    <th className="p-3 font-black">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {emails.map((m, idx) => (
+                    <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-mono font-bold text-slate-400">{idx + 1}</td>
+                      <td className="p-3 font-mono font-bold text-[#1F1A26]">
+                        {m.to}
+                      </td>
+                      <td className="p-3 font-mono font-bold text-[#BE3943]">
+                        {m.registrationNumber || '-'}
+                      </td>
+                      <td className="p-3 font-bold text-slate-800">
+                        {m.teamName || 'فريق تجريبي'}
+                      </td>
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 font-mono text-[10px] border border-slate-300">
+                          {m.mode === 'smtp' ? 'SMTP Server' : 'Simulated Dispatch'}
+                        </span>
+                      </td>
+                      <td className="p-3 text-slate-500 font-mono text-[11px]">
+                        {new Date(m.sentAt).toLocaleString('fr-FR', {
+                          dateStyle: 'short',
+                          timeStyle: 'medium',
+                        })}
+                      </td>
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 bg-emerald-600 text-white font-bold text-[10px]">
+                          {m.status === 'delivered_smtp' ? 'تم التسليم SMTP' : 'مؤكد بالخادم'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

@@ -1,560 +1,694 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import FigmaLogo from '@/components/ui/FigmaLogo';
+import { TextInput, SelectInput, DateInput, StepProgressBar } from '@/components/ui/FormFields';
 import { TRACKS } from '@/data/tracks';
-import { Team, TeamMember, TargetCategory } from '@/types/hackathon';
 import { saveTeam } from '@/lib/storage';
+import type { Team } from '@/types/hackathon';
 
-function RegisterPageContent() {
-  const searchParams = useSearchParams();
-  const initialTrackParam = searchParams?.get('track');
+/* ============================================================
+   TYPES
+   ============================================================ */
+type Member = { fullName: string; affiliation: string; birthday: string };
 
-  // Multi-step form step: 1 = Frame 1:4517, 2 = Frame 1:4536, 3 = Frame 26:2394
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [isErrorModalOpen, setIsErrorModalOpen] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [registeredTeam, setRegisteredTeam] = useState<Team | null>(null);
+type FormState = {
+  teamName: string;
+  leaderName: string;
+  email: string;
+  birthday: string;
+  affiliationBody: string;
+  affiliationType: string;
+  projectTitle: string;
+  participantTeamName: string;
+  teamSize: string;
+  projectField: string;
+  members: Member[];
+};
 
-  // Form State: Empty initial values with placeholders from Figma
-  const [wilayaCode, setWilayaCode] = useState<number>(16);
-  const [category, setCategory] = useState<TargetCategory>('clubs');
-  const [facilityName, setFacilityName] = useState<string>('');
-  const [name, setName] = useState<string>('');
-  const [projectTitle, setProjectTitle] = useState<string>('');
-  const [trackId, setTrackId] = useState<number>(
-    initialTrackParam ? parseInt(initialTrackParam, 10) || 1 : 1
-  );
-  const [membersCount, setMembersCount] = useState<number>(3);
+const emptyMember = (): Member => ({ fullName: '', affiliation: '', birthday: '' });
 
-  // Step 2 & 3 State
-  const [leaderName, setLeaderName] = useState<string>('');
-  const [leaderEmail, setLeaderEmail] = useState<string>('');
-  const [leaderBirthDate, setLeaderBirthDate] = useState<string>('');
+const initialState: FormState = {
+  teamName: '',
+  leaderName: '',
+  email: '',
+  birthday: '',
+  affiliationBody: '',
+  affiliationType: '',
+  projectTitle: '',
+  participantTeamName: '',
+  teamSize: '',
+  projectField: '',
+  members: [emptyMember(), emptyMember(), emptyMember()],
+};
 
-  // Sync track param if it changes
-  useEffect(() => {
-    if (initialTrackParam) {
-      const parsed = parseInt(initialTrackParam, 10);
-      if (parsed >= 1 && parsed <= 5) {
-        setTrackId(parsed);
-      }
-    }
-  }, [initialTrackParam]);
+const AFFILIATION_OPTIONS = [
+  'نوادي التطوع والمواطنة',
+  'دار الشباب',
+  'المركب الرياضي الجواري',
+  'جمعية محلية',
+  'أخرى',
+];
 
-  const handleNext = () => {
-    setCurrentStep((prev) => Math.min(3, prev + 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+const FIELD_OPTIONS = TRACKS.map((t) => t.title);
 
-  const handleBack = () => {
-    setCurrentStep((prev) => Math.max(1, prev - 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+const TEAM_SIZE_OPTIONS = ['3', '4', '5'];
 
-  // Final Submission to Backend API
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setIsSubmitting(true);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const today = () => new Date().toISOString().slice(0, 10);
 
-    try {
-      const sanitizedLeaderEmail = leaderEmail.includes('@') ? leaderEmail.trim() : 'leader@hackathon.dz';
-      const payload = {
-        name: name.trim() || 'فريق رواد الأثر الإيجابي',
-        facilityName: facilityName.trim() || 'دار الشباب أو المركب الرياضي الجواري',
-        category,
-        projectTitle: projectTitle.trim() || "منصة 'تطوع-تك' لحملات الأحياء",
-        projectSummary: projectTitle.trim() || "منصة 'تطوع-تك' لحملات الأحياء",
-        trackId,
-        wilayaCode,
-        leaderBirthDate,
-        leaderName: leaderName.trim() || 'قائد الفريق',
-        leaderEmail: sanitizedLeaderEmail,
-        members: [
-          { id: 'm-1', fullName: leaderName.trim() || 'قائد الفريق', phone: '0555000000', email: sanitizedLeaderEmail, role: 'قائد الفريق' },
-          { id: 'm-2', fullName: 'عضو الفريق 2', phone: '0666000000', email: 'member2@hackathon.dz', role: 'مطور / مبرمج' },
-          { id: 'm-3', fullName: 'عضو الفريق 3', phone: '0777000000', email: 'member3@hackathon.dz', role: 'مصمم / مسوق' },
-        ],
-        agreement: true,
-      };
+type Errors = Record<string, string>;
+type Status = 'form' | 'submitting' | 'success' | 'failure';
 
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+const SESSION_KEY = 'hackathon_registration_form';
 
-      const data = await res.json();
-
-      if (res.ok && data.success && data.team) {
-        setRegisteredTeam(data.team);
-        saveTeam(data.team);
-        setIsSuccess(true);
-        confetti({
-          particleCount: 120,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      } else {
-        setIsErrorModalOpen(true);
-      }
-    } catch (err) {
-      console.error('Submission failed:', err);
-      setIsErrorModalOpen(true);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // ================= 1. FIGMA SUCCESS SCREEN (FRAME 1:4551) =================
-  if (isSuccess) {
-    return (
-      <div className="relative min-h-screen bg-[#FBF9FC] py-12 px-4 sm:px-6 overflow-hidden flex flex-col items-center justify-center font-tajawal">
-        {/* Figma Ambient Radial Blurs */}
-        <div className="absolute -right-32 top-10 w-[482px] h-[487px] bg-[#5FAE84]/20 rounded-full blur-[160px] pointer-events-none -z-0"></div>
-        <div className="absolute -left-32 bottom-10 w-[482px] h-[487px] bg-[#5FAE84]/20 rounded-full blur-[160px] pointer-events-none -z-0"></div>
-
-        <div className="relative z-10 max-w-[1218px] w-full mx-auto flex flex-col items-center">
-          
-          {/* Top Brand Logo matching Figma Group 68 */}
-          <div className="mb-8">
-            <Link href="/">
-              <FigmaLogo size="sm" />
-            </Link>
-          </div>
-
-          {/* Frame 57 Container (1218x678 in Figma) */}
-          <div className="w-full bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] shadow-[-8px_8px_4px_0px_#1F1A26] p-8 sm:p-20 text-center flex flex-col items-center justify-center min-h-[500px]">
-            <div className="max-w-[783px] mx-auto space-y-6">
-              
-              <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-black text-[#5FAE84] tracking-tight leading-tight">
-                تم التســــجيـــل بنجـــــاح
-              </h1>
-
-              <p className="text-lg sm:text-xl text-[#000000] font-medium leading-relaxed">
-                سنرسل لك بريداً إلكترونياً بردنا قريباً، ترقبوا ذلك!
-              </p>
-
-              <div className="pt-8 flex justify-center">
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-[#5FAE84] hover:bg-[#4B9A70] text-white border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-lg sm:text-xl transition-all"
-                >
-                  <ArrowLeft className="w-6 h-6" />
-                  <span>العودة إلى الصفحة الرئيسية</span>
-                </Link>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </div>
-    );
-  }
-
-  // ================= 2. MULTI-STEP REGISTRATION FORM (FRAMES 1:4517, 1:4536, 26:2394) =================
+/* ============================================================
+   BACKGROUND BLOBS
+   ============================================================ */
+function BackgroundBlobs() {
   return (
-    <div className="relative min-h-screen bg-[#FBF9FC] py-12 px-4 sm:px-6 overflow-hidden flex flex-col items-center justify-center font-tajawal">
-      {/* Figma Ambient Radial Blurs */}
-      <div className="absolute -right-32 top-10 w-[482px] h-[487px] bg-[#5FAE84]/20 rounded-full blur-[160px] pointer-events-none -z-0"></div>
-      <div className="absolute -left-32 bottom-10 w-[482px] h-[487px] bg-[#5FAE84]/20 rounded-full blur-[160px] pointer-events-none -z-0"></div>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <div className="absolute -left-[240px] -top-[120px] size-[620px] rounded-full bg-[#5fae84] opacity-[0.08] blur-[175px] animate-blob-float" />
+      <div className="absolute -right-[240px] top-1/2 size-[620px] rounded-full bg-[#5fae84] opacity-[0.08] blur-[175px] animate-blob-float" style={{ animationDelay: '3s' }} />
+    </div>
+  );
+}
 
-      <div className="relative z-10 max-w-[1218px] w-full mx-auto flex flex-col items-center">
-        
-        {/* Top Brand Logo matching Figma Group 68 */}
-        <div className="mb-6">
-          <Link href="/">
-            <FigmaLogo size="sm" />
-          </Link>
+/* ============================================================
+   SUCCESS SCREEN
+   ============================================================ */
+function SuccessScreen({ onHome }: { onHome: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-12 text-center sm:gap-16 animate-fade-in-up">
+      <div className="flex flex-col items-center gap-6">
+        {/* Success checkmark */}
+        <div className="w-20 h-20 rounded-full bg-[#5FAE84]/10 flex items-center justify-center mb-2 animate-counter">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+            <path d="M5 13l4 4L19 7" stroke="#5FAE84" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
+        <h2
+          className="font-black leading-[1.2] text-[#478363] text-[36px] sm:text-[48px] lg:text-[56px]"
+          style={{ fontFamily: "'Tajawal:ExtraBold', var(--font-tajawal), sans-serif" }}
+          dir="auto"
+        >
+          تم التســــجيـــل بنجـــــاح
+        </h2>
+        <p
+          className="font-medium leading-[1.6] text-black text-[16px] sm:text-[20px] max-w-lg"
+          style={{ fontFamily: "'Tajawal:Medium', var(--font-tajawal), sans-serif" }}
+          dir="auto"
+        >
+          سنرسل لك بريداً إلكترونياً بردنا قريباً، ترقبوا ذلك!
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onHome}
+        className="neo-btn bg-[#5FAE84] text-white border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] px-8 py-4 sm:px-10 sm:py-5 font-bold text-[16px] sm:text-[20px] gap-3"
+        style={{ fontFamily: "'Tajawal:Medium', var(--font-tajawal), sans-serif" }}
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span>العودة إلى الصفحة الرئيسية</span>
+      </button>
+    </div>
+  );
+}
 
-        {/* Frame 57 Container (1218px x 678px in Figma) */}
-        <div className="w-full bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] shadow-[-8px_8px_4px_0px_#1F1A26] p-6 sm:p-12 lg:p-16">
-          
-          {/* Main Title: استمــارة التسجــــيل (Figma 48px font-black text-black) */}
-          <div className="text-center mb-10 sm:mb-12">
-            <h1 className="text-3xl sm:text-5xl font-black text-black tracking-tight leading-tight">
-              استمــارة التسجــــيل
-            </h1>
-          </div>
-
-          {/* ================= STEP 1: FIGMA FRAME 1:4517 ================= */}
-          {currentStep === 1 && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                
-                {/* Row 1, Right (in RTL): انتماء الفريق المشارك */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    انتماء الفريق المشارك <span className="text-[#FF4D62]">*</span>
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as TargetCategory)}
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium focus:outline-none focus:border-[#5FAE84]"
-                  >
-                    <option value="clubs">نوادي التطوع والمواطنة</option>
-                    <option value="associations">الجمعيات والمنظمات الشبابية</option>
-                    <option value="individuals">الشباب المنخرطون والمبتكرون</option>
-                  </select>
-                </div>
-
-                {/* Row 1, Left (in RTL): هيئة الإنتماء */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    هيئة الإنتماء
-                  </label>
-                  <input
-                    type="text"
-                    value={facilityName}
-                    onChange={(e) => setFacilityName(e.target.value)}
-                    placeholder="دار الشباب أو المركب الرياضي الجواري"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium placeholder:text-slate-400 focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 2, Right (in RTL): اسم الفريق المشارك */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    اسم الفريق المشارك <span className="text-[#FF4D62]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="مثال: رواد الأثر الإيجابي"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium placeholder:text-slate-400 focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 2, Left (in RTL): عنوان المبادرة / فكرة المشروع */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    عنوان المبادرة / فكرة المشروع <span className="text-[#FF4D62]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={projectTitle}
-                    onChange={(e) => setProjectTitle(e.target.value)}
-                    placeholder="مثال: منصة 'تطوع-تك' لحملات الأحياء"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium placeholder:text-slate-400 focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 3, Right (in RTL): المجال المشروع */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    المجال المشروع <span className="text-[#FF4D62]">*</span>
-                  </label>
-                  <select
-                    value={trackId}
-                    onChange={(e) => setTrackId(Number(e.target.value))}
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium focus:outline-none focus:border-[#5FAE84]"
-                  >
-                    {TRACKS.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Row 3, Left (in RTL): عدد أعضاء الفريق */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    عدد أعضاء الفريق <span className="text-[#FF4D62]">*</span>
-                  </label>
-                  <select
-                    value={membersCount}
-                    onChange={(e) => setMembersCount(Number(e.target.value))}
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium focus:outline-none focus:border-[#5FAE84]"
-                  >
-                    <option value={3}>من 3 الى 5 أعضاء</option>
-                    <option value={4}>4 أعضاء</option>
-                    <option value={5}>5 أعضاء</option>
-                  </select>
-                </div>
-
-              </div>
-
-              {/* Navigation Buttons: 'السابق' disabled on right, 'القادم' on left */}
-              <div className="pt-8 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="h-[68px] sm:h-[80px] px-8 sm:px-12 bg-[#5FAE84] hover:bg-[#4B9A70] text-[#FBF9FC] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-lg sm:text-xl flex items-center gap-3 transition-all cursor-pointer"
-                >
-                  <ArrowLeft className="w-6 h-6" />
-                  <span>القادم</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled
-                  className="h-[68px] px-8 sm:px-10 bg-[#FBF9FC] text-[#B3B3B3] border-[1.5px] border-[#1F1A26]/30 font-bold text-base cursor-not-allowed flex items-center gap-3"
-                >
-                  <span>الســابق</span>
-                  <ArrowRight className="w-5 h-5 text-[#B3B3B3]" />
-                </button>
-              </div>
-
-            </div>
-          )}
-
-          {/* ================= STEP 2: FIGMA FRAME 1:4536 ================= */}
-          {currentStep === 2 && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                
-                {/* Row 1, Right (in RTL): الاسم الكامل للقائد */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    الاسم الكامل للقائد
-                  </label>
-                  <input
-                    type="text"
-                    value={leaderName}
-                    onChange={(e) => setLeaderName(e.target.value)}
-                    placeholder="الاسم واللقب الكامل"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium placeholder:text-slate-400 focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 1, Left (in RTL): اسم الفريق */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    اسم الفريق
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="أدخل اسم الفريق"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium placeholder:text-slate-400 focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 2, Right (in RTL): تاريخ الميلاد */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    تاريخ الميلاد
-                  </label>
-                  <input
-                    type="text"
-                    value={leaderBirthDate}
-                    onChange={(e) => setLeaderBirthDate(e.target.value)}
-                    placeholder="مثال : 2006/08/21"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium placeholder:text-slate-400 focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 2, Left (in RTL): البريد الالكتروني */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    البريد الالكتروني
-                  </label>
-                  <input
-                    type="email"
-                    value={leaderEmail}
-                    onChange={(e) => setLeaderEmail(e.target.value)}
-                    placeholder="أدخل بريدك الالكتروني"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium placeholder:text-slate-400 focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-              </div>
-
-              {/* Navigation Buttons matching Figma Frame 1:4536: '1/5' + 'القـــادم' on left, 'الســابق' on right */}
-              <div className="pt-8 flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="h-[68px] sm:h-[80px] px-8 sm:px-12 bg-[#5FAE84] hover:bg-[#4B9A70] text-[#FBF9FC] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-lg sm:text-xl flex items-center gap-3 transition-all cursor-pointer"
-                  >
-                    <ArrowLeft className="w-6 h-6" />
-                    <span>القـــادم</span>
-                  </button>
-
-                  <span className="font-tajawal text-2xl font-bold text-[#1F1A26] select-none">
-                    1/5
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="h-[68px] px-8 sm:px-10 bg-[#FBF9FC] hover:bg-slate-100 text-[#1F1A26] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-base flex items-center gap-3 transition-all cursor-pointer"
-                >
-                  <span>الســابق</span>
-                  <ArrowRight className="w-5 h-5 text-[#1F1A26]" />
-                </button>
-              </div>
-
-            </div>
-          )}
-
-          {/* ================= STEP 3: FIGMA FRAME 26:2394 ================= */}
-          {currentStep === 3 && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                
-                {/* Row 1, Right (in RTL): الاسم الكامل */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    الاسم الكامل
-                  </label>
-                  <input
-                    type="text"
-                    value={leaderName}
-                    onChange={(e) => setLeaderName(e.target.value)}
-                    placeholder="الاسم واللقب الكامل"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 1, Left (in RTL): اسم الفريق */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    اسم الفريق
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="أدخل اسم الفريق"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 2, Right (in RTL): تاريخ الميلاد */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    تاريخ الميلاد
-                  </label>
-                  <input
-                    type="text"
-                    value={leaderBirthDate}
-                    onChange={(e) => setLeaderBirthDate(e.target.value)}
-                    placeholder="مثال : 2006/08/21"
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium focus:outline-none focus:border-[#5FAE84]"
-                  />
-                </div>
-
-                {/* Row 2, Left (in RTL): انتماء الفريق المشارك */}
-                <div className="space-y-2 text-right">
-                  <label className="block text-lg sm:text-[21px] font-medium text-[#0F172A]">
-                    انتماء الفريق المشارك
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value={
-                      category === 'clubs' 
-                        ? 'نوادي التطوع والمواطنة' 
-                        : category === 'associations'
-                        ? 'الجمعيات والمنظمات الشبابية'
-                        : 'الشباب المنخرطون والمبتكرون'
-                    }
-                    className="w-full h-[66px] px-6 bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] text-base text-[#213D2E] font-medium focus:outline-none"
-                  />
-                </div>
-
-              </div>
-
-              {/* Navigation Buttons matching Figma Frame 26:2394: 'انتهــى' on left, 'الســابق' on right */}
-              <div className="pt-8 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => handleSubmit()}
-                  disabled={isSubmitting}
-                  className="h-[68px] sm:h-[80px] px-10 sm:px-14 bg-[#5FAE84] hover:bg-[#4B9A70] text-[#FBF9FC] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-lg sm:text-xl flex items-center gap-3 transition-all cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                      <span>جاري التسجيل...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowLeft className="w-6 h-6" />
-                      <span>انتهــى</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  disabled={isSubmitting}
-                  className="h-[68px] px-8 sm:px-10 bg-[#FBF9FC] hover:bg-slate-100 text-[#1F1A26] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-base flex items-center gap-3 transition-all cursor-pointer"
-                >
-                  <span>الســابق</span>
-                  <ArrowRight className="w-5 h-5 text-[#1F1A26]" />
-                </button>
-              </div>
-
-            </div>
-          )}
-
+/* ============================================================
+   FAILURE SCREEN
+   ============================================================ */
+function FailureScreen({ onHome, onRetry }: { onHome: () => void; onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-12 text-center sm:gap-16 animate-fade-in-up">
+      <div className="flex flex-col items-center gap-6">
+        <div className="w-20 h-20 rounded-full bg-[#CC3E4E]/10 flex items-center justify-center mb-2 animate-shake">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke="#CC3E4E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
-
-        {/* ================= 4. FIGMA ERROR MODAL (FRAME 1:4561) ================= */}
-        {isErrorModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in font-tajawal">
-            <div className="bg-[#FBF9FC] border-[1.5px] border-[#1F1A26] shadow-[-8px_8px_4px_0px_#1F1A26] max-w-xl w-full p-8 sm:p-12 space-y-6 text-center">
-              
-              <h2 className="text-3xl sm:text-4xl font-black text-[#BE3943]">
-                فشــــل التسجيـــل
-              </h2>
-
-              <p className="text-sm sm:text-base text-slate-700 font-medium leading-relaxed">
-                حدث خطأ غير متوقع أثناء معالجة طلب التسجيل الخاص بك. يرجى المحاولة مرة أخرى!
-              </p>
-
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setIsErrorModalOpen(false)}
-                  className="w-full sm:w-auto px-8 py-4 bg-[#5FAE84] hover:bg-[#4B9A70] text-[#FBF9FC] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-base"
-                >
-                  الإبلاغ عن مشكلة
-                </button>
-
-                <Link
-                  href="/"
-                  className="w-full sm:w-auto px-8 py-4 bg-[#FBF9FC] hover:bg-slate-100 text-[#1F1A26] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] font-bold text-base"
-                >
-                  العودة إلى الصفحة الرئيسية
-                </Link>
-              </div>
-
-            </div>
-          </div>
-        )}
-
+        <h2
+          className="font-black leading-[1.2] text-[#bf3a4a] text-[36px] sm:text-[48px] lg:text-[56px]"
+          style={{ fontFamily: "'Tajawal:ExtraBold', var(--font-tajawal), sans-serif" }}
+          dir="auto"
+        >
+          فشــــل التسجيـــل
+        </h2>
+        <p
+          className="max-w-[800px] font-medium leading-[1.6] text-black text-[16px] sm:text-[20px]"
+          style={{ fontFamily: "'Tajawal:Medium', var(--font-tajawal), sans-serif" }}
+          dir="auto"
+        >
+          حدث خطأ غير متوقع أثناء معالجة طلب التسجيل الخاص بك. يرجى المحاولة مرة أخرى!
+        </p>
+      </div>
+      <div className="flex flex-col items-center gap-4 sm:flex-row-reverse sm:gap-6">
+        <button
+          type="button"
+          onClick={onRetry}
+          className="neo-btn bg-[#5FAE84] text-white border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] px-8 py-4 font-bold text-[16px] sm:text-[20px]"
+        >
+          إعادة المحاولة
+        </button>
+        <button
+          type="button"
+          onClick={onHome}
+          className="neo-btn bg-[#FBF9FC] text-[#1F1A26] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#000000] px-8 py-4 font-bold text-[16px] sm:text-[20px]"
+        >
+          العودة إلى الصفحة الرئيسية
+        </button>
       </div>
     </div>
   );
 }
 
+/* ============================================================
+   NAV BUTTONS
+   ============================================================ */
+function NextButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="group relative shrink-0 bg-[#5fae84] border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_0px_black] transition-all enabled:hover:-translate-y-[1px] enabled:hover:shadow-[-5px_5px_0px_0px_black] enabled:active:translate-x-[-2px] enabled:active:translate-y-[2px] enabled:active:shadow-[-2px_2px_0px_0px_black] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f1a26]"
+    >
+      <span className="flex items-center justify-center gap-2 px-6 py-4 sm:px-8 sm:py-5">
+        <span className="rotate-180" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <path d="M5 16h22M22 9l7 7-7 7" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="font-bold text-[#fbf9fc] text-[16px] sm:text-[20px]" dir="auto">
+          {label}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function PrevButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="relative shrink-0 bg-[#fbf9fc] border-[1.5px] border-[#1F1A26] transition-all enabled:hover:-translate-y-[1px] enabled:hover:shadow-[-3px_3px_0px_#1F1A26] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f1a26]"
+    >
+      <span className="flex items-center justify-center gap-2 px-6 py-4 sm:px-8 sm:py-5">
+        <span className="font-bold text-[#1f1a26] text-[14px] sm:text-[16px]" dir="auto">
+          {label}
+        </span>
+        <span className="rotate-180" aria-hidden>
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+            <path d="M27 16H5M12 9l-7 7 7 7" stroke="#1F1A26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/* ============================================================
+   MAIN REGISTRATION FLOW
+   ============================================================ */
+function RegistrationFlowContent() {
+  const searchParams = useSearchParams();
+  const initialTrackParam = searchParams?.get('track');
+
+  const [form, setForm] = useState<FormState>(() => {
+    // Restore from sessionStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = sessionStorage.getItem(SESSION_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch { /* ignore */ }
+    }
+    return initialState;
+  });
+
+  const [step, setStep] = useState(0);
+  const [errors, setErrors] = useState<Errors>({});
+  const [status, setStatus] = useState<Status>('form');
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
+
+  // Pre-fill track if provided
+  useEffect(() => {
+    if (initialTrackParam) {
+      const track = TRACKS.find((t) => t.id === Number(initialTrackParam));
+      if (track) {
+        setForm((f) => ({ ...f, projectField: track.title }));
+      }
+    }
+  }, [initialTrackParam]);
+
+  // Persist form state to sessionStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(form)); } catch { /* ignore */ }
+    }
+  }, [form]);
+
+  const teamSizeNum = useMemo(() => {
+    const n = parseInt(form.teamSize, 10);
+    return Number.isFinite(n) ? n : 3;
+  }, [form.teamSize]);
+
+  // Total steps: Step 0 (project/team), Step 1 (leader), Steps 2...(1+teamSize) (members)
+  const totalSteps = 2 + teamSizeNum;
+
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    setErrors((e) => (e[key as string] ? { ...e, [key as string]: '' } : e));
+  };
+
+  const setMember = (index: number, key: keyof Member, value: string) => {
+    setForm((f) => {
+      const members = f.members.map((m, i) => (i === index ? { ...m, [key]: value } : m));
+      return { ...f, members };
+    });
+    setErrors((e) => {
+      const k = `member_${index}_${key}`;
+      return e[k] ? { ...e, [k]: '' } : e;
+    });
+  };
+
+  const changeTeamSize = (value: string) => {
+    const n = parseInt(value, 10);
+    setForm((f) => {
+      const members = [...f.members];
+      if (n > members.length) {
+        while (members.length < n) members.push(emptyMember());
+      } else if (n < members.length) {
+        members.length = n;
+      }
+      return { ...f, teamSize: value, members };
+    });
+    setErrors((e) => (e.teamSize ? { ...e, teamSize: '' } : e));
+  };
+
+  const validateStep = (s: number): Errors => {
+    const e: Errors = {};
+    if (s === 0) {
+      if (!form.affiliationBody.trim()) e.affiliationBody = 'هذا الحقل مطلوب';
+      if (!form.affiliationType) e.affiliationType = 'يرجى الاختيار';
+      if (!form.projectTitle.trim()) e.projectTitle = 'هذا الحقل مطلوب';
+      if (!form.participantTeamName.trim()) e.participantTeamName = 'هذا الحقل مطلوب';
+      if (!form.teamSize) e.teamSize = 'يرجى الاختيار';
+      if (!form.projectField) e.projectField = 'يرجى الاختيار';
+    } else if (s === 1) {
+      if (!form.teamName.trim()) e.teamName = 'هذا الحقل مطلوب';
+      if (!form.leaderName.trim()) e.leaderName = 'هذا الحقل مطلوب';
+      if (!form.email.trim()) e.email = 'هذا الحقل مطلوب';
+      else if (!EMAIL_RE.test(form.email.trim())) e.email = 'يرجى إدخال بريد إلكتروني صحيح';
+      if (!form.birthday) e.birthday = 'هذا الحقل مطلوب';
+      else if (form.birthday > today()) e.birthday = 'لا يمكن اختيار تاريخ في المستقبل';
+    } else {
+      const i = s - 2;
+      const m = form.members[i];
+      if (!m?.fullName.trim()) e[`member_${i}_fullName`] = 'هذا الحقل مطلوب';
+      if (!m?.affiliation) e[`member_${i}_affiliation`] = 'يرجى الاختيار';
+      if (!m?.birthday) e[`member_${i}_birthday`] = 'هذا الحقل مطلوب';
+      else if (m.birthday > today()) e[`member_${i}_birthday`] = 'لا يمكن اختيار تاريخ في المستقبل';
+    }
+    return e;
+  };
+
+  const isLastStep = step === totalSteps - 1;
+
+  const goNext = () => {
+    const e = validateStep(step);
+    if (Object.keys(e).length) {
+      setErrors(e);
+      return;
+    }
+    if (isLastStep) {
+      void submit();
+    } else {
+      setSlideDirection('left');
+      setStep((s) => s + 1);
+      setErrors({});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const goPrev = () => {
+    if (step === 0) {
+      // Go home
+      window.location.href = '/';
+      return;
+    }
+    setSlideDirection('right');
+    setStep((s) => s - 1);
+    setErrors({});
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const submit = async () => {
+    if (status === 'submitting') return;
+    setStatus('submitting');
+
+    // Map form field to track ID
+    const trackIndex = TRACKS.findIndex((t) => t.title === form.projectField);
+    const trackId = trackIndex >= 0 ? TRACKS[trackIndex].id : 1;
+
+    const categoryMap: Record<string, string> = {
+      'نوادي التطوع والمواطنة': 'clubs',
+      'دار الشباب': 'clubs',
+      'المركب الرياضي الجواري': 'clubs',
+      'جمعية محلية': 'associations',
+      'أخرى': 'individuals',
+    };
+
+    const payload = {
+      name: form.participantTeamName || form.teamName,
+      facilityName: form.affiliationBody,
+      category: categoryMap[form.affiliationType] || 'clubs',
+      projectTitle: form.projectTitle,
+      projectSummary: form.projectTitle,
+      trackId,
+      wilayaCode: 16,
+      leaderBirthDate: form.birthday,
+      leaderName: form.leaderName,
+      leaderEmail: form.email,
+      members: [
+        {
+          id: 'm-1',
+          fullName: form.leaderName,
+          phone: '0555000000',
+          email: form.email,
+          role: 'قائد الفريق',
+        },
+        ...form.members.slice(0, teamSizeNum).map((m, idx) => ({
+          id: `m-${idx + 2}`,
+          fullName: m.fullName,
+          phone: '0555000000',
+          email: `member${idx + 2}@hackathon.dz`,
+          role: idx === 0 ? 'مطور / مبرمج' : idx === 1 ? 'مصمم / مسوق' : 'منسق ميداني',
+        })),
+      ],
+      agreement: true,
+    };
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.team) {
+        saveTeam(data.team);
+        setStatus('success');
+        // Clear session storage
+        if (typeof window !== 'undefined') {
+          try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+        }
+        // Confetti!
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#5FAE84', '#4ADE80', '#BE3943', '#F4B41A', '#FBF9FC'],
+        });
+      } else {
+        setStatus('failure');
+      }
+    } catch {
+      setStatus('failure');
+    }
+  };
+
+  const resetAndHome = () => {
+    setForm(initialState);
+    setStep(0);
+    setErrors({});
+    setStatus('form');
+    if (typeof window !== 'undefined') {
+      try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+    }
+    window.location.href = '/';
+  };
+
+  /* ============================================================
+     RENDER STEP CONTENT
+     ============================================================ */
+  const renderStep = () => {
+    if (step === 0) {
+      return (
+        <div className="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
+          <SelectInput
+            label="انتماء الفريق المشارك"
+            required
+            value={form.affiliationType}
+            onChange={(v) => set('affiliationType', v)}
+            options={AFFILIATION_OPTIONS}
+            error={errors.affiliationType}
+            placeholder="نوادي التطوع والمواطنة"
+          />
+          <TextInput
+            label="هيئة الإنتماء"
+            required
+            value={form.affiliationBody}
+            onChange={(v) => set('affiliationBody', v)}
+            error={errors.affiliationBody}
+            placeholder="دار الشباب أو المركب الرياضي الجواري"
+          />
+          <TextInput
+            label="اسم الفريق المشارك"
+            required
+            value={form.participantTeamName}
+            onChange={(v) => set('participantTeamName', v)}
+            error={errors.participantTeamName}
+            placeholder="مثال: رواد الأثر الإيجابي"
+          />
+          <TextInput
+            label="عنوان المبادرة / فكرة المشروع"
+            required
+            value={form.projectTitle}
+            onChange={(v) => set('projectTitle', v)}
+            error={errors.projectTitle}
+            placeholder="مثال: منصة 'تطوع-تك' لحملات الأحياء"
+          />
+          <SelectInput
+            label="المجال المشروع"
+            required
+            value={form.projectField}
+            onChange={(v) => set('projectField', v)}
+            options={FIELD_OPTIONS}
+            error={errors.projectField}
+            placeholder="اختر مجال المشروع"
+          />
+          <SelectInput
+            label="عدد أعضاء الفريق"
+            required
+            value={form.teamSize}
+            onChange={changeTeamSize}
+            options={TEAM_SIZE_OPTIONS}
+            error={errors.teamSize}
+            placeholder="من 3 الى 5 أعضاء"
+          />
+        </div>
+      );
+    }
+    if (step === 1) {
+      return (
+        <div className="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
+          <TextInput
+            label="الاسم الكامل للقائد"
+            required
+            value={form.leaderName}
+            onChange={(v) => set('leaderName', v)}
+            error={errors.leaderName}
+            placeholder="الاسم واللقب الكامل"
+          />
+          <TextInput
+            label="اسم الفريق"
+            required
+            value={form.teamName}
+            onChange={(v) => set('teamName', v)}
+            error={errors.teamName}
+            placeholder="أدخل اسم الفريق"
+          />
+          <DateInput
+            label="تاريخ الميلاد"
+            required
+            value={form.birthday}
+            onChange={(v) => set('birthday', v)}
+            error={errors.birthday}
+          />
+          <TextInput
+            label="البريد الالكتروني"
+            required
+            type="email"
+            value={form.email}
+            onChange={(v) => set('email', v)}
+            error={errors.email}
+            placeholder="أدخل بريدك الالكتروني"
+          />
+        </div>
+      );
+    }
+    // Member steps
+    const i = step - 2;
+    const m = form.members[i];
+    if (!m) return null;
+    return (
+      <div className="flex flex-col gap-6">
+        <p
+          className="text-right text-[18px] sm:text-[22px] text-[#478363] font-bold"
+          style={{ fontFamily: "'Tajawal:Bold', var(--font-tajawal), sans-serif" }}
+          dir="auto"
+        >
+          {`بيانات العضو ${i + 1}`}
+        </p>
+        <div className="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
+          <TextInput
+            label="الاسم الكامل"
+            required
+            value={m.fullName}
+            onChange={(v) => setMember(i, 'fullName', v)}
+            error={errors[`member_${i}_fullName`]}
+            placeholder="الاسم واللقب الكامل"
+          />
+          <SelectInput
+            label="انتماء العضو"
+            required
+            value={m.affiliation}
+            onChange={(v) => setMember(i, 'affiliation', v)}
+            options={AFFILIATION_OPTIONS}
+            error={errors[`member_${i}_affiliation`]}
+            placeholder="نوادي التطوع والمواطنة"
+          />
+          <div className="md:col-span-2 md:max-w-[calc(50%-1.25rem)]">
+            <DateInput
+              label="تاريخ الميلاد"
+              required
+              value={m.birthday}
+              onChange={(v) => setMember(i, 'birthday', v)}
+              error={errors[`member_${i}_birthday`]}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* ============================================================
+     STEP LABELS for progress bar
+     ============================================================ */
+  const stepLabels = useMemo(() => {
+    const labels = ['معلومات المشروع', 'بيانات القائد'];
+    for (let i = 0; i < teamSizeNum; i++) {
+      labels.push(`العضو ${i + 1}`);
+    }
+    return labels;
+  }, [teamSizeNum]);
+
+  /* ============================================================
+     MAIN RENDER
+     ============================================================ */
+  return (
+    <div dir="rtl" className="relative min-h-screen w-full overflow-hidden bg-[#fbf9fc] px-4 py-8 sm:px-6 lg:py-12">
+      <BackgroundBlobs />
+      <div className="relative mx-auto flex w-full max-w-[1280px] flex-col items-center gap-8 z-10">
+        
+        {/* Logo */}
+        <Link href="/" className="transition-transform hover:scale-105">
+          <FigmaLogo size="sm" />
+        </Link>
+
+        {status === 'success' || status === 'failure' ? (
+          <div className="w-full border-[2px] border-solid border-[#1f1a26] bg-[#fbf9fc] px-6 py-16 shadow-[-8px_8px_4px_0px_#1f1a26] sm:px-12 sm:py-24">
+            {status === 'success' ? (
+              <SuccessScreen onHome={resetAndHome} />
+            ) : (
+              <FailureScreen onHome={resetAndHome} onRetry={() => setStatus('form')} />
+            )}
+          </div>
+        ) : (
+          <div className="w-full border-[2px] border-solid border-[#1f1a26] bg-[#fbf9fc] px-6 py-10 shadow-[-8px_8px_4px_0px_#1f1a26] sm:px-10 sm:py-12 lg:px-16">
+            
+            {/* Title */}
+            <h1
+              className="mb-6 text-center leading-[1.2] text-black text-[28px] sm:text-[36px] lg:text-[44px] font-black"
+              style={{ fontFamily: "'Tajawal:ExtraBold', var(--font-tajawal), sans-serif" }}
+              dir="auto"
+            >
+              استمــارة التسجــــيل
+            </h1>
+
+            {/* Progress bar */}
+            <StepProgressBar currentStep={step} totalSteps={totalSteps} />
+
+            {/* Step content with slide animation */}
+            <div
+              className={`min-h-[300px] ${
+                slideDirection === 'left' ? 'animate-slide-in-left' : 'animate-slide-in-right'
+              }`}
+              key={step}
+            >
+              {renderStep()}
+            </div>
+
+            {/* Loading overlay */}
+            {status === 'submitting' && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white border-[1.5px] border-[#1F1A26] shadow-[-4px_4px_0px_#1F1A26] px-10 py-8 flex flex-col items-center gap-4">
+                  <Loader2 className="w-10 h-10 text-[#5FAE84] animate-spin" />
+                  <p className="font-bold text-[#1F1A26] text-lg">جاري التسجيل...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="mt-12 flex items-center justify-between gap-4">
+              <PrevButton label="الســابق" onClick={goPrev} disabled={status === 'submitting'} />
+              <div className="flex items-center gap-4">
+                <span
+                  className="text-[#1f1a26] text-[18px] sm:text-[28px] font-bold tabular-nums"
+                  dir="ltr"
+                  style={{ fontFamily: "'Inter:Regular', sans-serif" }}
+                >
+                  {step + 1}/{totalSteps}
+                </span>
+                <NextButton
+                  label={status === 'submitting' ? 'جاري الإرسال...' : isLastStep ? 'انتهــى' : 'القادم'}
+                  onClick={goNext}
+                  disabled={status === 'submitting'}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   PAGE EXPORT WITH SUSPENSE
+   ============================================================ */
 export default function RegisterPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#FBF9FC] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#5FAE84] animate-spin" />
-      </div>
-    }>
-      <RegisterPageContent />
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FBF9FC] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-[#5FAE84] animate-spin" />
+        </div>
+      }
+    >
+      <RegistrationFlowContent />
     </Suspense>
   );
 }

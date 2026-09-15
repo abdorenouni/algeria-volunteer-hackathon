@@ -42,3 +42,9 @@ next-env.d.ts
 
 # figma cache
 .figma_cache/
+
+# reference & local scripts
+friend_code/
+friend_code.zip
+.agents/
+scripts/
