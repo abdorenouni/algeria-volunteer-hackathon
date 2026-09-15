@@ -21,21 +21,21 @@ function RegisterPageContent() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [registeredTeam, setRegisteredTeam] = useState<Team | null>(null);
 
-  // Form State: Initialized with Figma's exact default values / placeholders
+  // Form State: Empty initial values with placeholders from Figma
   const [wilayaCode, setWilayaCode] = useState<number>(16);
   const [category, setCategory] = useState<TargetCategory>('clubs');
-  const [facilityName, setFacilityName] = useState<string>('دار الشباب أو المركب الرياضي الجواري');
-  const [name, setName] = useState<string>('رواد الأثر الإيجابي');
-  const [projectTitle, setProjectTitle] = useState<string>("منصة 'تطوع-تك' لحملات الأحياء");
+  const [facilityName, setFacilityName] = useState<string>('');
+  const [name, setName] = useState<string>('');
+  const [projectTitle, setProjectTitle] = useState<string>('');
   const [trackId, setTrackId] = useState<number>(
     initialTrackParam ? parseInt(initialTrackParam, 10) || 1 : 1
   );
   const [membersCount, setMembersCount] = useState<number>(3);
 
   // Step 2 & 3 State
-  const [leaderName, setLeaderName] = useState<string>('الاسم واللقب الكامل');
-  const [leaderEmail, setLeaderEmail] = useState<string>('أدخل بريدك الالكتروني');
-  const [leaderBirthDate, setLeaderBirthDate] = useState<string>('2006/08/21');
+  const [leaderName, setLeaderName] = useState<string>('');
+  const [leaderEmail, setLeaderEmail] = useState<string>('');
+  const [leaderBirthDate, setLeaderBirthDate] = useState<string>('');
 
   // Sync track param if it changes
   useEffect(() => {
