@@ -694,7 +694,9 @@ export default function AdminDashboardPage() {
 
             <div className="flex items-center gap-3">
               <div className="text-xs font-mono bg-slate-100 px-3 py-1.5 border border-slate-300 font-bold">
-                النمط: <span className="text-[#BE3943]">{senderInfo?.mode === 'smtp' ? 'خادم SMTP حقيقي' : 'محاكاة وتوثيق آمن'}</span>
+                النمط: <span className={senderInfo?.mode === 'resend' || senderInfo?.mode === 'smtp' ? 'text-emerald-700 font-bold' : 'text-[#BE3943]'}>
+                  {senderInfo?.mode === 'resend' ? 'Resend API (نشط ومباشر)' : senderInfo?.mode === 'smtp' ? 'خادم SMTP حقيقي' : 'محاكاة وتوثيق آمن'}
+                </span>
               </div>
 
               <button

@@ -10,8 +10,8 @@ export interface SentEmailRecord {
   registrationNumber?: string;
   teamName?: string;
   leaderName?: string;
-  status: 'delivered_smtp' | 'simulated_success' | 'failed';
-  mode: 'smtp' | 'test_account' | 'simulated';
+  status: 'delivered_resend' | 'delivered_smtp' | 'simulated_success' | 'failed';
+  mode: 'resend' | 'smtp' | 'test_account' | 'simulated';
   messageId?: string;
   previewUrl?: string;
   sentAt: string;
@@ -53,11 +53,22 @@ export function logSentEmail(record: SentEmailRecord) {
 }
 
 /**
- * Creates Nodemailer Transporter
- * 1. If SMTP environment variables are present -> uses real SMTP
- * 2. If not present -> creates graceful test or fallback transport
+ * Resolves email configuration:
+ * 1. Resend API Key (Direct high-speed HTTP dispatch, recommended for Vercel)
+ * 2. SMTP Environment Variables (Nodemailer)
+ * 3. Simulated Fallback (Logs payload safely)
  */
 export async function createNodeTransporter() {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    return {
+      mode: 'resend' as const,
+      apiKey: resendApiKey,
+      transporter: null,
+      from: process.env.EMAIL_FROM || '"هاكاثون الابتكار والتطوع" <hackathon@acsociety.club>',
+    };
+  }
+
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
@@ -66,6 +77,8 @@ export async function createNodeTransporter() {
 
   if (host && user && pass) {
     return {
+      mode: 'smtp' as const,
+      apiKey: null,
       transporter: nodemailer.createTransport({
         host,
         port,
@@ -75,16 +88,16 @@ export async function createNodeTransporter() {
           rejectUnauthorized: false,
         }
       }),
-      mode: 'smtp' as const,
-      from: process.env.EMAIL_FROM || `\"هاكاثون الابتكار والتطوع\" <${user}>`,
+      from: process.env.EMAIL_FROM || `"هاكاثون الابتكار والتطوع" <${user}>`,
     };
   }
 
-  // Fallback: Use test transporter or simulated delivery
+  // Fallback: simulated delivery
   return {
-    transporter: null,
     mode: 'simulated' as const,
-    from: process.env.EMAIL_FROM || '\"هاكاثون الابتكار والتطوع\" <no-reply@hackathon.dz>',
+    apiKey: null,
+    transporter: null,
+    from: process.env.EMAIL_FROM || '"هاكاثون الابتكار والتطوع" <no-reply@hackathon.dz>',
   };
 }
 
@@ -198,7 +211,7 @@ export async function sendRegistrationConfirmationEmail(params: SendConfirmation
     </div>
 
     <div class="footer">
-      <p>هذه الرسالة آلية تم إنشاؤها وتأكيدها بواسطة المنصة الرقمية الرسمية للهاكاثون (Node Mail Sender).</p>
+      <p>هذه الرسالة آلية تم إنشاؤها وتأكيدها بواسطة المنصة الرقمية الرسمية للهاكاثون (Resend & Node Sender).</p>
       <p>© 2026 اللجنة الوطنية لتنظيم هاكاثون الابتكار والتطوع - جميع الحقوق محفوظة.</p>
     </div>
   </div>
@@ -209,11 +222,56 @@ export async function sendRegistrationConfirmationEmail(params: SendConfirmation
   const recordId = `mail-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
   try {
-    const { transporter, mode, from } = await createNodeTransporter();
+    const config = await createNodeTransporter();
 
-    if (mode === 'smtp' && transporter) {
-      const info = await transporter.sendMail({
-        from,
+    // 1. Resend Dispatch
+    if (config.mode === 'resend' && config.apiKey) {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: config.from,
+          to: [to],
+          subject,
+          html: htmlContent,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData?.message || `Resend API Error (HTTP ${res.status})`);
+      }
+
+      const logRecord: SentEmailRecord = {
+        id: recordId,
+        to,
+        from: config.from,
+        subject,
+        registrationNumber,
+        teamName,
+        leaderName,
+        status: 'delivered_resend',
+        mode: 'resend',
+        messageId: resData?.id,
+        sentAt: new Date().toISOString(),
+        htmlPreview: htmlContent.slice(0, 500) + '...',
+      };
+      logSentEmail(logRecord);
+
+      return {
+        success: true,
+        mode: 'resend',
+        messageId: resData?.id,
+      };
+    }
+
+    // 2. SMTP Dispatch
+    if (config.mode === 'smtp' && config.transporter) {
+      const info = await config.transporter.sendMail({
+        from: config.from,
         to,
         subject,
         html: htmlContent,
@@ -222,7 +280,7 @@ export async function sendRegistrationConfirmationEmail(params: SendConfirmation
       const logRecord: SentEmailRecord = {
         id: recordId,
         to,
-        from,
+        from: config.from,
         subject,
         registrationNumber,
         teamName,
@@ -242,12 +300,12 @@ export async function sendRegistrationConfirmationEmail(params: SendConfirmation
       };
     }
 
-    // Fallback: Log and record simulated dispatch so developers and testers can verify email dispatch
-    console.log(`[Node Sender] Email successfully created and dispatched for ${to} (${registrationNumber})`);
+    // 3. Fallback: Log simulated dispatch
+    console.log(`[Node Sender] Simulated dispatch for ${to} (${registrationNumber})`);
     const logRecord: SentEmailRecord = {
       id: recordId,
       to,
-      from,
+      from: config.from,
       subject,
       registrationNumber,
       teamName,
@@ -284,8 +342,8 @@ export async function sendRegistrationConfirmationEmail(params: SendConfirmation
 
     return {
       success: false,
-      mode: 'smtp',
-      error: err?.message || 'Failed to dispatch email',
+      mode: 'failed',
+      error: err?.message || 'Error dispatching email',
     };
   }
 }
